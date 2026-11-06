@@ -302,6 +302,59 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
 
   const [trialSimCaseSlug, setTrialSimCaseSlug] = useState<string | null>(null);
 
+  // Default app icon positions (neat 3-column 90s OS layout)
+  const defaultIconPositions: Record<string, { x: number; y: number }> = {
+    case_wall: { x: 24, y: 24 },
+    trial_sim: { x: 24, y: 124 },
+    terminal: { x: 24, y: 224 },
+    evidence_board: { x: 24, y: 324 },
+    timeline: { x: 24, y: 424 },
+    interviews: { x: 136, y: 24 },
+    document_room: { x: 136, y: 124 },
+    geo_recon: { x: 136, y: 224 },
+    exercises: { x: 136, y: 324 },
+    collectibles: { x: 136, y: 424 },
+    secret_folder: { x: 248, y: 24 },
+    investigator_access: { x: 248, y: 124 },
+    shutdown: { x: 248, y: 224 },
+  };
+
+  // Draggable desktop icon positions state (persisted)
+  const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('docket_desktop_icon_positions');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return defaultIconPositions;
+  });
+
+  const [draggingIconId, setDraggingIconId] = useState<string | null>(null);
+  const [hasMovedIcon, setHasMovedIcon] = useState<boolean>(false);
+  const iconDragStartRef = useRef<{ x: number; y: number; mouseX: number; mouseY: number } | null>(null);
+
+  const handleIconMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSelectedIconId(id);
+    const currentPos = iconPositions[id] || defaultIconPositions[id] || { x: 24, y: 24 };
+    iconDragStartRef.current = {
+      x: currentPos.x,
+      y: currentPos.y,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+    };
+    setDraggingIconId(id);
+    setHasMovedIcon(false);
+  };
+
+  const handleResetIconPositions = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    soundEngine.playKeyClick();
+    setIconPositions(defaultIconPositions);
+    try {
+      localStorage.removeItem('docket_desktop_icon_positions');
+    } catch (_) {}
+  };
+
   // Window drag state
   const [draggingWindowId, setDraggingWindowId] = useState<string | null>(null);
   const [windowDragOffset, setWindowDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -394,23 +447,44 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!draggingWindowId) return;
-
-    setWindows((prev) =>
-      prev.map((w) => {
-        if (w.id === draggingWindowId) {
-          const newX = Math.max(0, e.clientX - windowDragOffset.x);
-          const newY = Math.max(0, e.clientY - windowDragOffset.y);
-          return { ...w, x: newX, y: newY };
-        }
-        return w;
-      })
-    );
+    if (draggingWindowId) {
+      setWindows((prev) =>
+        prev.map((w) => {
+          if (w.id === draggingWindowId) {
+            const newX = Math.max(0, e.clientX - windowDragOffset.x);
+            const newY = Math.max(0, e.clientY - windowDragOffset.y);
+            return { ...w, x: newX, y: newY };
+          }
+          return w;
+        })
+      );
+    } else if (draggingIconId && iconDragStartRef.current) {
+      const deltaX = e.clientX - iconDragStartRef.current.mouseX;
+      const deltaY = e.clientY - iconDragStartRef.current.mouseY;
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        setHasMovedIcon(true);
+        const newX = Math.max(10, Math.min(window.innerWidth - 120, iconDragStartRef.current.x + deltaX));
+        const newY = Math.max(10, Math.min(window.innerHeight - 150, iconDragStartRef.current.y + deltaY));
+        setIconPositions((prev) => ({
+          ...prev,
+          [draggingIconId]: { x: newX, y: newY },
+        }));
+      }
+    }
   };
 
   const handleMouseUp = () => {
     if (draggingWindowId) {
       setDraggingWindowId(null);
+    }
+    if (draggingIconId) {
+      if (hasMovedIcon) {
+        try {
+          localStorage.setItem('docket_desktop_icon_positions', JSON.stringify(iconPositions));
+        } catch (_) {}
+      }
+      setDraggingIconId(null);
+      iconDragStartRef.current = null;
     }
   };
 
@@ -575,43 +649,69 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
           </div>
         </div>
 
-        {/* Desktop Icons Grid (Workspace shortcuts) */}
-        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 max-w-4xl">
+        {/* Desktop Quick Control: Auto-Align Apps Button */}
+        <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
+          <button
+            onClick={handleResetIconPositions}
+            className="px-2.5 py-1 text-[10px] font-mono bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-400 hover:text-zinc-200 rounded flex items-center space-x-1.5 shadow-sm transition-colors"
+            title="Auto-align application icons to default grid"
+          >
+            <RotateCcw className="w-3 h-3 text-zinc-400" />
+            <span className="hidden sm:inline">ALIGN APPS</span>
+          </button>
+        </div>
+
+        {/* Freely Draggable Desktop Application Shortcuts */}
+        <div className="relative z-10 w-full h-full pointer-events-none">
           {desktopIcons.map((icon) => {
             const isSelected = selectedIconId === icon.id;
+            const pos = iconPositions[icon.id] || defaultIconPositions[icon.id] || { x: 24, y: 24 };
+            const isDragging = draggingIconId === icon.id;
+
             return (
-              <button
+              <div
                 key={icon.id}
+                onMouseDown={(e) => handleIconMouseDown(e, icon.id)}
                 onClick={(e) => {
                   e.stopPropagation();
-                  soundEngine.playKeyClick();
-                  setSelectedIconId(icon.id);
-                  icon.onClick();
+                  if (!hasMovedIcon) {
+                    soundEngine.playKeyClick();
+                    setSelectedIconId(icon.id);
+                    icon.onClick();
+                  }
                 }}
-                className={`group flex flex-col items-center justify-center p-2.5 rounded text-center transition-all cursor-pointer ${
+                style={{
+                  position: 'absolute',
+                  left: `${pos.x}px`,
+                  top: `${pos.y}px`,
+                  width: '102px',
+                  zIndex: isDragging ? 50 : 10,
+                  userSelect: 'none',
+                }}
+                className={`pointer-events-auto group flex flex-col items-center justify-center p-2 rounded text-center transition-shadow cursor-grab active:cursor-grabbing ${
                   isSelected
-                    ? 'bg-amber-950/40 border border-amber-600/60 shadow-[0_0_10px_rgba(251,191,36,0.3)]'
+                    ? 'bg-amber-950/40 border border-amber-600/70 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
                     : 'hover:bg-zinc-900/60 border border-transparent hover:border-zinc-800'
-                }`}
-                style={{ width: '110px' }}
+                } ${isDragging ? 'opacity-90 scale-105 shadow-2xl' : ''}`}
+                title="Click to launch, drag to reposition anywhere on desktop"
               >
-                <div className="p-1.5 rounded transition-transform group-hover:scale-110">
+                <div className="p-1 rounded transition-transform group-hover:scale-110 pointer-events-none">
                   {icon.icon}
                 </div>
-                <span className="text-[11px] font-mono font-bold text-zinc-200 group-hover:text-amber-300 mt-1 line-clamp-1">
+                <span className="text-[11px] font-mono font-bold text-zinc-200 group-hover:text-amber-300 mt-0.5 line-clamp-1 pointer-events-none">
                   {icon.label}
                 </span>
-                <span className="text-[9px] text-zinc-500 font-mono truncate w-full">
+                <span className="text-[9px] text-zinc-500 font-mono truncate w-full pointer-events-none">
                   {icon.sublabel}
                 </span>
-              </button>
+              </div>
             );
           })}
         </div>
 
-        {/* Floating Draggable Windows */}
+        {/* Floating Draggable Windows (Preserved in DOM when minimized so background radar & timers keep running) */}
         {windows.map((win) => {
-          if (!win.isOpen || win.isMinimized) return null;
+          if (!win.isOpen) return null;
 
           return (
             <div
@@ -624,6 +724,7 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                 width: win.isMaximized ? '100vw' : `${win.width}px`,
                 height: win.isMaximized ? 'calc(100vh - 40px)' : `${win.height}px`,
                 zIndex: win.zIndex,
+                display: win.isMinimized ? 'none' : 'flex',
               }}
               className="flex flex-col bg-[#101318] border-2 border-[#2f3744] shadow-2xl rounded overflow-hidden"
             >
@@ -770,6 +871,58 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
             </div>
           );
         })}
+
+        {/* Live Mini Geo-Radar HUD (Visible when Geographical Recon map is minimized) */}
+        {(() => {
+          const geoWin = windows.find((w) => w.id === 'geo_recon');
+          if (!geoWin?.isOpen || !geoWin?.isMinimized) return null;
+
+          return (
+            <div className="absolute bottom-4 right-4 z-40 bg-[#080d12]/95 border-2 border-emerald-500/80 rounded-lg shadow-[0_0_25px_rgba(16,185,129,0.35)] p-3 w-80 font-mono text-xs backdrop-blur animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex items-center justify-between pb-2 border-b border-emerald-900/60 mb-2">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-emerald-300 font-bold uppercase tracking-wider text-[11px]">
+                    LIVE GEO-RECON RADAR
+                  </span>
+                </div>
+                <span className="text-[9px] px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded">
+                  BACKGROUND SWEEP
+                </span>
+              </div>
+
+              {/* Mini radar circle display */}
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="relative w-14 h-14 rounded-full border border-emerald-600 bg-emerald-950/50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                  <div className="absolute inset-0 rounded-full border border-emerald-500/30" />
+                  <div className="w-8 h-8 rounded-full border border-dashed border-emerald-500/40" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {/* Sweep ray */}
+                  <div className="absolute inset-0 origin-center animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0_300deg,rgba(16,185,129,0.6)_360deg)] pointer-events-none" />
+                </div>
+                <div className="text-[10px] space-y-0.5 text-zinc-300">
+                  <div className="text-emerald-400 font-bold flex items-center space-x-1">
+                    <Compass className="w-3 h-3 text-emerald-400 animate-spin" />
+                    <span>RADAR SWEEP ACTIVE</span>
+                  </div>
+                  <div className="text-zinc-400">7 Case Jurisdictions Triangulated</div>
+                  <div className="text-zinc-500 text-[9px]">PULSE: LIVE | SCAN: 100% SOURCED</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1.5 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500">WINDOW MINIMIZED</span>
+                <button
+                  onClick={() => openWindow('geo_recon')}
+                  className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 text-[10px] font-bold rounded flex items-center space-x-1 transition-colors"
+                >
+                  <Compass className="w-3 h-3 text-emerald-400" />
+                  <span>RESTORE MAP VIEW &rarr;</span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* System Toast Alert */}
         {systemToast && (

@@ -15,6 +15,8 @@ import {
   HelpCircle,
   AlertTriangle,
   Fingerprint,
+  Plus,
+  X,
 } from 'lucide-react';
 import { CaseFile, EvidenceBoardItem, EvidenceConnection } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
@@ -126,6 +128,14 @@ export const CaseEvidenceBoardView: React.FC<CaseEvidenceBoardViewProps> = ({ ca
   const [selectedItem, setSelectedItem] = useState<EvidenceBoardItem | null>(null);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<boolean>(false);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // New item modal state
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [newTitle, setNewTitle] = useState<string>('');
+  const [newType, setNewType] = useState<EvidenceBoardItem['itemType']>('document');
+  const [newStatus, setNewStatus] = useState<EvidenceBoardItem['status']>('Established Fact');
+  const [newSnippet, setNewSnippet] = useState<string>('');
+  const [newSource, setNewSource] = useState<string>('');
 
   // Mouse drag handlers
   const handleMouseDown = (e: React.MouseEvent, item: EvidenceBoardItem) => {
@@ -240,6 +250,52 @@ export const CaseEvidenceBoardView: React.FC<CaseEvidenceBoardViewProps> = ({ ca
     setConnectingFromId(null);
   };
 
+  // Add custom note / evidence to case board
+  const handleAddNewItem = () => {
+    if (!newTitle.trim() || !newSnippet.trim()) return;
+    soundEngine.playKeyClick();
+    const newItem: EvidenceBoardItem = {
+      id: `case-custom-${Date.now()}`,
+      title: newTitle.trim(),
+      itemType: newType,
+      status: newStatus,
+      x: 80 + Math.floor(Math.random() * 200),
+      y: 80 + Math.floor(Math.random() * 160),
+      snippet: newSnippet.trim(),
+      source: newSource.trim() || 'Investigator Supplementary Clue',
+      date: new Date().toISOString().split('T')[0],
+      caseSlug: caseData.slug,
+      caseNumber: caseData.caseNumber,
+      tags: ['Field Note', newType],
+    };
+
+    const nextItems = [newItem, ...boardItems];
+    setBoardItems(nextItems);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ items: nextItems, connections }));
+    } catch (e) {}
+    setIsAddModalOpen(false);
+    setNewTitle('');
+    setNewSnippet('');
+    setNewSource('');
+  };
+
+  // Delete a board item
+  const handleDeleteItem = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    soundEngine.playKeyClick();
+    const nextItems = boardItems.filter((it) => it.id !== id);
+    const nextConns = connections.filter((c) => c.fromId !== id && c.toId !== id);
+    setBoardItems(nextItems);
+    setConnections(nextConns);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ items: nextItems, connections: nextConns }));
+    } catch (e) {}
+    if (selectedItem?.id === id) {
+      setSelectedItem(null);
+    }
+  };
+
   // Delete a connection line
   const handleDeleteConnection = (conn: EvidenceConnection) => {
     soundEngine.playKeyClick();
@@ -307,6 +363,19 @@ export const CaseEvidenceBoardView: React.FC<CaseEvidenceBoardViewProps> = ({ ca
               RELATED TO
             </button>
           </div>
+
+          {/* Add Custom Note / Evidence Clue */}
+          <button
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setIsAddModalOpen(true);
+            }}
+            className="retro-btn text-xs px-2.5 py-1.5 flex items-center space-x-1 border-amber-600 bg-amber-950/40 text-amber-300 font-bold hover:bg-amber-900/60"
+            title="Add note or extra clue to this case board"
+          >
+            <Plus className="w-3.5 h-3.5 text-amber-400" />
+            <span>PIN NOTE / CLUE</span>
+          </button>
 
           {/* Connect tool toggle */}
           <button
@@ -499,9 +568,18 @@ export const CaseEvidenceBoardView: React.FC<CaseEvidenceBoardViewProps> = ({ ca
                   >
                     {isFact ? 'CONFIRMED FACT' : 'ALLEGATION/THEORY'}
                   </span>
-                  <span className="text-[8px] font-pixel text-zinc-500 uppercase">
-                    {item.itemType}
-                  </span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-[8px] font-pixel text-zinc-500 uppercase">
+                      {item.itemType}
+                    </span>
+                    <button
+                      onClick={(e) => handleDeleteItem(item.id, e)}
+                      className="text-zinc-600 hover:text-red-400 p-0.5"
+                      title="Remove card from board"
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Title */}
@@ -524,6 +602,120 @@ export const CaseEvidenceBoardView: React.FC<CaseEvidenceBoardViewProps> = ({ ca
             </div>
           );
         })}
+
+        {/* Modal: Add Case Evidence / Clue */}
+        {isAddModalOpen && (
+          <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#12161c] border-2 border-amber-500/80 rounded max-w-lg w-full p-5 shadow-[0_0_30px_rgba(245,158,11,0.25)] text-zinc-200 font-mono text-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
+                <div className="flex items-center space-x-2">
+                  <Pin className="w-4 h-4 text-amber-400" />
+                  <span className="font-bold text-amber-300 uppercase tracking-wider text-sm">
+                    PIN NEW CASE NOTE / EVIDENCE ({caseData.caseNumber})
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="text-zinc-400 hover:text-zinc-100 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                    Exhibitor Title / Evidence Label *
+                  </label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="e.g. Tire Tread Cast or Hotel Phone Log"
+                    className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                      Evidence Category
+                    </label>
+                    <select
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value as EvidenceBoardItem['itemType'])}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-2 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="document">DOCUMENT</option>
+                      <option value="forensic">FORENSIC</option>
+                      <option value="physical">PHYSICAL</option>
+                      <option value="statement">STATEMENT</option>
+                      <option value="suspect">SUSPECT / POI</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                      Verification Status
+                    </label>
+                    <select
+                      value={newStatus}
+                      onChange={(e) => setNewStatus(e.target.value as EvidenceBoardItem['status'])}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-2 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Established Fact">Established Fact</option>
+                      <option value="Documented Allegation">Documented Allegation</option>
+                      <option value="Forensic Theory">Forensic Theory</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                    Source / Official Custodian
+                  </label>
+                  <input
+                    type="text"
+                    value={newSource}
+                    onChange={(e) => setNewSource(e.target.value)}
+                    placeholder="e.g. County Sheriff Evidence Locker"
+                    className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                    Details / Clue Information *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newSnippet}
+                    onChange={(e) => setNewSnippet(e.target.value)}
+                    placeholder="Enter any documented information, hypothesis, witness statement or field clue..."
+                    className="w-full bg-zinc-950 border border-zinc-700 p-2.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500 leading-relaxed font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-5 pt-3 border-t border-zinc-800">
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleAddNewItem}
+                  disabled={!newTitle.trim() || !newSnippet.trim()}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-black font-bold rounded shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center space-x-1.5"
+                >
+                  <Pin className="w-3.5 h-3.5" />
+                  <span>PIN TO CASE BOARD</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

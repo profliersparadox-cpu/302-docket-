@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Pin,
   RefreshCw,
@@ -14,6 +14,9 @@ import {
   Shield,
   Layers,
   Sparkles,
+  Plus,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { EvidenceBoardItem, EvidenceConnection } from '../../types.ts';
 import { initialEvidenceBoardItems, initialEvidenceConnections } from '../../data/archiveVaultData.ts';
@@ -39,6 +42,16 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
   const [activeFilter, setActiveFilter] = useState<'all' | 'document' | 'forensic' | 'physical' | 'statement' | 'suspect'>('all');
   const [connectModeFrom, setConnectModeFrom] = useState<string | null>(null);
 
+  // New Item Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [newTitle, setNewTitle] = useState<string>('');
+  const [newType, setNewType] = useState<EvidenceBoardItem['itemType']>('document');
+  const [newStatus, setNewStatus] = useState<EvidenceBoardItem['status']>('Established Fact');
+  const [newSnippet, setNewSnippet] = useState<string>('');
+  const [newSource, setNewSource] = useState<string>('');
+  const [newCaseNumber, setNewCaseNumber] = useState<string>('DOCKET-001');
+  const [newTags, setNewTags] = useState<string>('Custom Note, Field Clue');
+
   // Dragging state
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -55,7 +68,7 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
         // Toggle or create connection
         soundEngine.playKeyClick();
         const exists = connections.some(
-          (c) =>
+          (c: EvidenceConnection) =>
             (c.fromId === connectModeFrom && c.toId === item.id) ||
             (c.fromId === item.id && c.toId === connectModeFrom)
         );
@@ -63,7 +76,7 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
         let nextConns: EvidenceConnection[];
         if (exists) {
           nextConns = connections.filter(
-            (c) =>
+            (c: EvidenceConnection) =>
               !(
                 (c.fromId === connectModeFrom && c.toId === item.id) ||
                 (c.fromId === item.id && c.toId === connectModeFrom)
@@ -103,8 +116,8 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
     const newX = Math.max(10, Math.min(boardRect.width - 240, e.clientX - boardRect.left - dragOffset.x));
     const newY = Math.max(10, Math.min(boardRect.height - 180, e.clientY - boardRect.top - dragOffset.y));
 
-    setItems((prev) => {
-      const updated = prev.map((item) => (item.id === draggingId ? { ...item, x: newX, y: newY } : item));
+    setItems((prev: EvidenceBoardItem[]) => {
+      const updated = prev.map((item: EvidenceBoardItem) => (item.id === draggingId ? { ...item, x: newX, y: newY } : item));
       return updated;
     });
   };
@@ -126,13 +139,55 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
     setConnectModeFrom(null);
   };
 
-  const filteredItems = items.filter((item) => {
+  const handleAddNewItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newSnippet.trim()) return;
+
+    soundEngine.playBootBeep();
+    const newItem: EvidenceBoardItem = {
+      id: `custom-${Date.now()}`,
+      title: newTitle.trim(),
+      itemType: newType,
+      status: newStatus,
+      x: 80 + Math.floor(Math.random() * 220),
+      y: 80 + Math.floor(Math.random() * 160),
+      snippet: newSnippet.trim(),
+      source: newSource.trim() || 'Investigator User Note',
+      date: new Date().toISOString().split('T')[0],
+      caseSlug: 'custom',
+      caseNumber: newCaseNumber || 'CUSTOM-NOTE',
+      tags: newTags.split(',').map((t: string) => t.trim()).filter(Boolean),
+    };
+
+    const nextItems = [newItem, ...items];
+    setItems(nextItems);
+    saveToStorage(nextItems, connections);
+    setIsAddModalOpen(false);
+    setNewTitle('');
+    setNewSnippet('');
+    setNewSource('');
+    setSelectedItem(newItem);
+  };
+
+  const handleDeleteItem = (id: string) => {
+    soundEngine.playKeyClick();
+    const nextItems = items.filter((it: EvidenceBoardItem) => it.id !== id);
+    const nextConns = connections.filter((c: EvidenceConnection) => c.fromId !== id && c.toId !== id);
+    setItems(nextItems);
+    setConnections(nextConns);
+    saveToStorage(nextItems, nextConns);
+    if (selectedItem?.id === id) {
+      setSelectedItem(null);
+    }
+  };
+
+  const filteredItems = items.filter((item: EvidenceBoardItem) => {
     if (activeFilter === 'all') return true;
     return item.itemType === activeFilter;
   });
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0c0f] text-zinc-300 font-tech select-none overflow-hidden">
+    <div className="flex flex-col h-full bg-[#0a0c0f] text-zinc-300 font-tech select-none overflow-hidden relative">
       {/* Board Controls Toolbar */}
       <div className="bg-[#12151a] border-b border-[#2d333b] px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center space-x-2">
@@ -146,6 +201,19 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Add Custom Note / Evidence Button */}
+          <button
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setIsAddModalOpen(true);
+            }}
+            className="px-2.5 py-1 text-xs font-mono bg-emerald-950 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 rounded flex items-center space-x-1 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+            title="Pin custom evidence or notes to board"
+          >
+            <Plus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>PIN NOTE / EVIDENCE</span>
+          </button>
+
           {/* Filter Pills */}
           <div className="flex items-center space-x-1 bg-zinc-950 p-1 border border-zinc-800 rounded">
             {(['all', 'document', 'forensic', 'physical', 'statement'] as const).map((cat) => (
@@ -209,9 +277,9 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
               <stop offset="100%" stopColor="#991b1b" stopOpacity="0.5" />
             </linearGradient>
           </defs>
-          {connections.map((conn, idx) => {
-            const from = items.find((i) => i.id === conn.fromId);
-            const to = items.find((i) => i.id === conn.toId);
+          {connections.map((conn: EvidenceConnection, idx: number) => {
+            const from = items.find((i: EvidenceBoardItem) => i.id === conn.fromId);
+            const to = items.find((i: EvidenceBoardItem) => i.id === conn.toId);
             if (!from || !to) return null;
 
             // Card center approximations
@@ -243,7 +311,7 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
         </svg>
 
         {/* Evidence Cards */}
-        {filteredItems.map((item) => {
+        {filteredItems.map((item: EvidenceBoardItem) => {
           const isSelected = selectedItem?.id === item.id;
           const isConnectingSource = connectModeFrom === item.id;
 
@@ -296,7 +364,7 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
 
               {/* Tags */}
               <div className="flex flex-wrap gap-1">
-                {item.tags.slice(0, 2).map((t, i) => (
+                {item.tags.slice(0, 2).map((t: string, i: number) => (
                   <span key={i} className="px-1 py-0.2 bg-zinc-900 text-zinc-400 border border-zinc-800 text-[9px] rounded">
                     #{t}
                   </span>
@@ -367,7 +435,7 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
                 </div>
               )}
 
-              <div className="pt-2 border-t border-zinc-900 flex justify-between items-center">
+              <div className="pt-2 border-t border-zinc-900 flex justify-between items-center gap-2">
                 {onOpenCase && selectedItem.caseSlug && (
                   <button
                     onClick={() => onOpenCase(selectedItem.caseSlug)}
@@ -376,9 +444,165 @@ export const InteractiveEvidenceBoard: React.FC<InteractiveEvidenceBoardProps> =
                     OPEN COMPLETE CASE DOSSIER &rarr;
                   </button>
                 )}
-                <span className="text-[10px] text-zinc-500 font-mono">
-                  READ-ONLY SECURE EXHIBIT
-                </span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleDeleteItem(selectedItem.id)}
+                    className="px-2 py-1 text-red-400 hover:text-red-200 hover:bg-red-950/80 border border-red-800 rounded text-xs flex items-center space-x-1 font-mono"
+                    title="Remove exhibit from active pinboard"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>REMOVE</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Add Extra Note / Evidence Clue */}
+        {isAddModalOpen && (
+          <div className="absolute inset-0 bg-black/75 z-40 flex items-center justify-center p-4">
+            <div className="bg-[#12161c] border-2 border-amber-500/80 rounded max-w-lg w-full p-5 shadow-[0_0_30px_rgba(245,158,11,0.25)] text-zinc-200 font-mono text-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
+                <div className="flex items-center space-x-2">
+                  <Pin className="w-4 h-4 text-amber-400" />
+                  <span className="font-bold text-amber-300 uppercase tracking-wider text-sm">
+                    PIN NEW CLUE / EVIDENCE TO BOARD
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="text-zinc-400 hover:text-zinc-100 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                    Exhibitor Title / Evidence Label *
+                  </label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="e.g. Handwritten Letter Postmark or DNA Trace Analysis"
+                    className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                      Evidence Category
+                    </label>
+                    <select
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value as EvidenceBoardItem['itemType'])}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-2 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="document">DOCUMENT</option>
+                      <option value="forensic">FORENSIC</option>
+                      <option value="physical">PHYSICAL</option>
+                      <option value="statement">STATEMENT</option>
+                      <option value="suspect">SUSPECT / POI</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                      Verification Status
+                    </label>
+                    <select
+                      value={newStatus}
+                      onChange={(e) => setNewStatus(e.target.value as EvidenceBoardItem['status'])}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-2 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Established Fact">Established Fact</option>
+                      <option value="Documented Allegation">Documented Allegation</option>
+                      <option value="Investigative Hypothesis">Investigative Hypothesis</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                      Target Docket Case #
+                    </label>
+                    <select
+                      value={newCaseNumber}
+                      onChange={(e) => setNewCaseNumber(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-2 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="DOCKET-001">DOCKET-001 (Ramsey)</option>
+                      <option value="DOCKET-002">DOCKET-002 (Golden State Killer)</option>
+                      <option value="DOCKET-003">DOCKET-003 (Petito)</option>
+                      <option value="DOCKET-004">DOCKET-004 (Lindbergh)</option>
+                      <option value="DOCKET-005">DOCKET-005 (Wetterling)</option>
+                      <option value="DOCKET-006">DOCKET-006 (Nassar & USAG)</option>
+                      <option value="DOCKET-007">DOCKET-007 (Epstein & Maxwell)</option>
+                      <option value="MULTI-CASE">CROSS-DOCKET LEAD</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                      Source / Custodian
+                    </label>
+                    <input
+                      type="text"
+                      value={newSource}
+                      onChange={(e) => setNewSource(e.target.value)}
+                      placeholder="e.g. FBI Crime Lab / Court Records"
+                      className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                    Details / Information / Witness Notes *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newSnippet}
+                    onChange={(e) => setNewSnippet(e.target.value)}
+                    placeholder="Enter any documented information, hypothesis, forensic measurement, or case lead..."
+                    className="w-full bg-zinc-950 border border-zinc-700 p-2.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500 leading-relaxed font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-zinc-400 uppercase mb-1">
+                    Tags (Comma Separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={newTags}
+                    onChange={(e) => setNewTags(e.target.value)}
+                    placeholder="e.g. Lead, Forensic, Ballistics, 1996"
+                    className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-5 pt-3 border-t border-zinc-800">
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleAddNewItem}
+                  disabled={!newTitle.trim() || !newSnippet.trim()}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-black font-bold rounded shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center space-x-1.5"
+                >
+                  <Pin className="w-3.5 h-3.5" />
+                  <span>PIN TO BOARD</span>
+                </button>
               </div>
             </div>
           </div>
