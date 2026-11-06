@@ -1,0 +1,29 @@
+# Render Blueprint configuration for THE 302 DOCKET
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: the-302-docket
+    runtime: node
+    plan: starter
+    region: oregon
+    # Root Directory: Leave blank / empty if repo is at root
+    # Build Command:
+    #   Using npm: npm install && npm run build
+    #   Using bun: bun install && bun run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    # Start Command:
+    #   Using npm: npm start
+    #   Using bun: bun run start
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_INITIAL_USER
+        value: lead_investigator
+      - key: ADMIN_INITIAL_PASSWORD
+        value: Archive302@Bureau!Case
+    disk:
+      name: archive-storage
+      mountPath: /data
+      sizeGB: 1

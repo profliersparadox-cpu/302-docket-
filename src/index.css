@@ -1,0 +1,252 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-terminal: 'VT323', monospace;
+    --font-pixel: 'Silkscreen', monospace;
+    --font-tech: 'Share Tech Mono', monospace;
+    --font-typewriter: 'Courier Prime', monospace;
+    --font-code: 'JetBrains Mono', monospace;
+    --font-serif: 'Newsreader', Georgia, serif;
+
+    --crt-phosphor: #34d399;
+    --crt-amber: #f59e0b;
+    --crt-blood: #ef4444;
+    --crt-bg: #0b0d0e;
+    --crt-window-bg: #111417;
+  }
+
+  body {
+    background-color: #060708;
+    color: #d1d5db;
+    font-family: var(--font-tech);
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+/* Font classes */
+.font-terminal {
+  font-family: var(--font-terminal);
+}
+
+.font-pixel {
+  font-family: var(--font-pixel);
+}
+
+.font-tech {
+  font-family: var(--font-tech);
+}
+
+.font-typewriter {
+  font-family: var(--font-typewriter);
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+/* CRT monitor scanlines effect */
+.crt-overlay {
+  position: relative;
+}
+
+.crt-scanlines::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  z-index: 9999;
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+/* Subtle CRT curvature vignette */
+.crt-vignette::after {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0; left: 0; bottom: 0; right: 0;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Retro window styling (1990s OS style) */
+.retro-window {
+  background-color: #121519;
+  border: 2px solid #2d333b;
+  box-shadow: 2px 2px 0px #000, -1px -1px 0px #3f4756 inset, 1px 1px 0px #090b0e inset;
+}
+
+.retro-window-header {
+  background: linear-gradient(90deg, #1e242c 0%, #161a20 100%);
+  border-bottom: 2px solid #2d333b;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.retro-window-header.active {
+  background: linear-gradient(90deg, #2c1a1a 0%, #1f1313 100%);
+  border-bottom: 2px solid #4a2424;
+}
+
+.retro-btn {
+  background: #1e2329;
+  border: 1px solid #3f4756;
+  border-right-color: #0d1013;
+  border-bottom-color: #0d1013;
+  color: #c9d1d9;
+  padding: 2px 8px;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 1px 1px 0px #000;
+  transition: all 0.1s ease;
+}
+
+.retro-btn:active {
+  border-color: #0d1013;
+  border-right-color: #3f4756;
+  border-bottom-color: #3f4756;
+  transform: translate(1px, 1px);
+}
+
+.retro-btn-red {
+  background: #3b1414;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.retro-btn-red:hover {
+  background: #4c1d1d;
+  color: #fee2e2;
+}
+
+.retro-btn-green {
+  background: #0f2e1d;
+  border-color: #166534;
+  color: #86efac;
+}
+
+.retro-btn-green:hover {
+  background: #143e27;
+  color: #bbf7d0;
+}
+
+/* Terminal phosphor glow */
+.text-phosphor {
+  color: #4ade80;
+  text-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+}
+
+.text-amber-glow {
+  color: #fbbf24;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+}
+
+.text-blood-glow {
+  color: #f87171;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* Redacted classified black bar text */
+.classified-redacted {
+  background-color: #18191c;
+  color: #18191c;
+  user-select: none;
+  padding: 0 4px;
+  border-radius: 1px;
+  display: inline-block;
+  cursor: help;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.classified-redacted:hover, .classified-redacted.revealed {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  text-decoration: underline dotted #dc2626;
+  text-shadow: 0 0 5px rgba(239, 68, 68, 0.4);
+}
+
+/* Stamps */
+.retro-stamp {
+  border: 2px dashed #dc2626;
+  color: #ef4444;
+  font-family: var(--font-tech);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding: 2px 6px;
+  display: inline-block;
+  transform: rotate(-2deg);
+}
+
+.retro-stamp-green {
+  border: 2px solid #16a34a;
+  color: #22c55e;
+  font-family: var(--font-tech);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 2px 6px;
+  display: inline-block;
+  transform: rotate(1deg);
+}
+
+.retro-stamp-amber {
+  border: 2px solid #d97706;
+  color: #f59e0b;
+  font-family: var(--font-tech);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 2px 6px;
+  display: inline-block;
+  transform: rotate(-1deg);
+}
+
+/* Blinking terminal cursor */
+@keyframes terminalBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: terminalBlink 0.9s infinite;
+}
+
+/* Screen glitch animation */
+@keyframes subtleGlitch {
+  0% { transform: translate(0) }
+  20% { transform: translate(-1px, 1px) }
+  40% { transform: translate(-1px, -1px) }
+  60% { transform: translate(1px, 1px) }
+  80% { transform: translate(1px, -1px) }
+  100% { transform: translate(0) }
+}
+
+.screen-glitch {
+  animation: subtleGlitch 0.25s ease;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0f12;
+  border-left: 1px solid #1a1e24;
+}
+::-webkit-scrollbar-thumb {
+  background: #252b33;
+  border: 1px solid #363e4a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4452;
+}

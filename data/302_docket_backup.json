@@ -1,0 +1,1702 @@
+{
+  "system": "THE 302 DOCKET // REPO SYNC SUBSYSTEM",
+  "version": "1.0",
+  "syncedAt": "2026-11-04T14:43:30.570Z",
+  "syncedBy": "lead_investigator",
+  "statistics": {
+    "totalCases": 8,
+    "totalMedia": 0
+  },
+  "cases": [
+    {
+      "id": "case-001-ramsey",
+      "slug": "jonbenet-ramsey-boulder",
+      "caseNumber": "DOCKET-001-CO-1996",
+      "title": "CASE 001 — JONBENÉT RAMSEY",
+      "subtitle": "Boulder Police Department Casework #96-15795: Unsolved Child Homicide & Ransom Note Analysis",
+      "category": "Crimes Against Children",
+      "location": "Boulder, Colorado",
+      "year": 1996,
+      "status": "Cold Case / Unresolved",
+      "isPublished": true,
+      "isFeatured": true,
+      "contentWarnings": [
+        "Documented child homicide investigation",
+        "Unresolved cold case evidence",
+        "Non-graphic factual procedural reporting"
+      ],
+      "summary": "On December 26, 1996, six-year-old JonBenét Ramsey was reported kidnapped after her mother discovered a 2.5-page handwritten ransom note on a back staircase demanding $118,000. Seven hours later, her body was discovered in the basement wine cellar of the family home. The investigation was marred by early crime scene contamination, conflicting investigative theories (intruder vs. household members), a 1999 grand jury indictment that the district attorney declined to prosecute, and foreign male DNA profiles in CODIS that remain unidentified.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "JonBenét Patricia Ramsey (born August 6, 1990) was a six-year-old beauty pageant titleholder living with her parents, John and Patsy Ramsey, and nine-year-old brother Burke in a 7,000-square-foot Tudor-style residence at 755 15th Street in Boulder, Colorado. John Ramsey was the chief executive of Access Graphics, a computer systems subsidiary of Lockheed Martin.",
+        "victimInfo": "JonBenét Ramsey, aged 6. Autopsy conducted by Boulder County Coroner Dr. John Meyer determined cause of death was asphyxia by strangulation associated with craniocerebral trauma.",
+        "jurisdiction": "Boulder Police Department, Boulder County District Attorney’s Office, Colorado Bureau of Investigation (CBI), and FBI Behavioral Analysis Unit (consultative capacity).",
+        "initialAlertDate": "December 26, 1996 at 05:52 AM (911 emergency call placed by Patsy Ramsey)"
+      },
+      "incident": {
+        "narrative": "The Ramsey family returned home from a Christmas dinner at friends’ house around 10:00 PM on December 25, 1996. At approximately 5:30 AM on December 26, Patsy Ramsey awakened and discovered three handwritten pages on the back spiral staircase. The note claimed JonBenét had been taken by a \"small foreign faction\" demanding an exact sum of $118,000. At 5:52 AM, Patsy dialed 911. Friends and victim advocates were summoned to the residence, inadvertently contaminating potential forensic evidence prior to a comprehensive forensic lockdown.",
+        "timeline": [
+          {
+            "date": "December 25, 1996 ~10:00 PM",
+            "title": "Ramsey Family Returns Home",
+            "description": "Family returns from Christmas party; JonBenét is carried upstairs to bed asleep.",
+            "source": "Boulder Police Interview Records"
+          },
+          {
+            "date": "December 26, 1996 05:52 AM",
+            "title": "911 Kidnapping Call",
+            "description": "Patsy Ramsey reports finding 2.5-page ransom note demanding $118,000; officer arrives at 5:59 AM.",
+            "source": "Boulder Emergency Communications Dispatch Audio Log"
+          },
+          {
+            "date": "December 26, 1996 ~01:05 PM",
+            "title": "Discovery of Victim in Basement",
+            "description": "Detective Linda Arndt instructs John Ramsey and friend Fleet White to search the house for anything unusual; John discovers JonBenét’s body in the windowless basement wine cellar.",
+            "source": "Detective Linda Arndt Sworn Deposition (1998)"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "The investigation immediately divided into two competing schools of thought: the \"Umbrella of Suspicion\" directed at the parents by Boulder Police Department detectives, versus the \"Intruder Theory\" championed by legendary Colorado Springs homicide detective Lou Smit. In 1997, Smit identified an unlatched basement window with a broken pane, suitcase positioned beneath it, and scuff marks indicating external entry. Modern genetic testing re-examined the garrote cord, paintbrush handle sourced from Patsy’s art kit, and unidentified male DNA in the waistband and panties.",
+        "procedureNotes": "Crime scene was not cordoned off as a homicide scene until after the body was discovered at 1:05 PM, allowing numerous visitors to traverse floors. Handwriting exemplars collected from John and Patsy Ramsey; John was eliminated as author, while Patsy was classified as \"could not be excluded.\"",
+        "interviewRecordsSummary": "Over 140 formal interviews conducted. FBI profiler John Douglas conducted behavioral analysis concluding the crime was inconsistent with familial homicide pattern.",
+        "timeline": [
+          {
+            "date": "January 1997",
+            "title": "Detective Lou Smit Recruited",
+            "description": "Boulder DA Alex Hunter hires veteran investigator Lou Smit to examine evidence independently.",
+            "source": "Boulder County DA Memorandum"
+          },
+          {
+            "date": "September 1998",
+            "title": "Grand Jury Convened",
+            "description": "Boulder County Grand Jury impaneled to hear testimony from forensic scientists, family members, and investigators.",
+            "source": "State Judicial Records"
+          },
+          {
+            "date": "July 2008",
+            "title": "Touch-DNA Exoneration Letter",
+            "description": "DA Mary Lacy issues formal letter exonerating Ramsey family members based on touch-DNA finding of an unknown male profile.",
+            "source": "Boulder County DA Official Correspondence"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-ramsey-01",
+          "exhibitNumber": "CBI-EXHIBIT-01",
+          "title": "The 2.5-Page Handwritten Ransom Note",
+          "type": "document",
+          "description": "Three sheets of lined legal paper torn from Patsy Ramsey’s personal notepad using a Sharpie pen from the home. Demanded $118,000—identical to John Ramsey’s 1996 corporate bonus.",
+          "significance": "Longest ransom note in FBI annals (375 words). Contains quotes and linguistic parallels to Hollywood films including Speed, Ransom, and Dirty Harry.",
+          "recoveredAt": "December 26, 1996 06:00 AM",
+          "recoveredBy": "Officer Rick French, Boulder PD",
+          "classification": "Public Record"
+        },
+        {
+          "id": "ev-ramsey-02",
+          "exhibitNumber": "CBI-DNA-002",
+          "title": "Unidentified Male Biological Profile (CODIS Case Record)",
+          "type": "forensic",
+          "description": "STR nuclear DNA profile recovered from blood spots on JonBenét’s underwear and matched to touch-DNA on the waistband of her long johns in 2008. Entered into CODIS under unidentified male profile.",
+          "significance": "Points to an unknown male contributor not matching any Ramsey family member, law enforcement officer, or coroner staff.",
+          "recoveredAt": "1997 & 2008",
+          "recoveredBy": "Colorado Bureau of Investigation / Bode Technology",
+          "classification": "Confidential"
+        },
+        {
+          "id": "ev-ramsey-03",
+          "exhibitNumber": "CBI-PHOTO-BASEMENT",
+          "title": "Basement Window Grating & Footprint Impressions",
+          "type": "physical",
+          "description": "Unlatched ground-level basement window with broken pane and foliage disturbance, beneath which a Samsonite suitcase was positioned.",
+          "significance": "Core physical basis for the intruder theory presented by Lou Smit, contesting the claim that the house was sealed.",
+          "recoveredAt": "December 1996 / March 1997",
+          "recoveredBy": "Detective Lou Smit",
+          "classification": "FD-302 Record"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-john-ramsey",
+          "name": "John Bennett Ramsey",
+          "role": "Father of Victim",
+          "status": "Exonerated",
+          "background": "CEO of Access Graphics; corporate executive and pilot.",
+          "verifiedFindings": "Eliminated as source of handwriting by Secret Service and CBI analysts; DNA does not match the foreign profile in CODIS. Exonerated by DA Mary Lacy in 2008.",
+          "allegations": "Early focus of Boulder PD leaks suggesting familial staging; indicted by 1999 Grand Jury on child abuse neglect charges that the DA refused to sign.",
+          "outcome": "No criminal charges filed; continues to advocate for advanced forensic genealogy testing."
+        },
+        {
+          "id": "poi-patsy-ramsey",
+          "name": "Patricia Ann Ramsey",
+          "alias": "Patsy Ramsey",
+          "role": "Mother of Victim",
+          "status": "Deceased",
+          "background": "Former Miss West Virginia (1977); mother of JonBenét and Burke.",
+          "verifiedFindings": "Handwriting analysis was inconclusive (\"could not be eliminated\"); DNA does not match foreign profile. Passed away from ovarian cancer in 2006.",
+          "allegations": "Accused by select investigators of writing the note in panic to stage an accidental trauma incident.",
+          "outcome": "Exonerated post-mortem by DA Mary Lacy in 2008."
+        },
+        {
+          "id": "poi-unknown-intruder",
+          "name": "Unknown Male Contributor (\"Subject CODIS-CO-1996\")",
+          "role": "Unidentified Suspect",
+          "status": "Uncharged Suspect",
+          "background": "Male profile matching touch-DNA and epithelial cell samples recovered from victim garments.",
+          "verifiedFindings": "Profile registered in the FBI Combined DNA Index System (CODIS); no match found across millions of offender profiles to date.",
+          "allegations": "Hypothesized by Lou Smit and independent cold case investigators as an intruder with local familiarity or pageant stalking fixation.",
+          "outcome": "Subject remains unidentified; case remains an open, active cold case homicide investigation."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The primary modern investigative breakthrough occurred in 2008 when Bode Technology utilized newly developed touch-DNA analysis on the waistband of JonBenét’s clothing, confirming the presence of genetic material matching the foreign male profile previously isolated from her underwear.",
+        "turningPoints": [
+          {
+            "date": "October 1999",
+            "title": "Grand Jury Indictment True Bills",
+            "detail": "Grand jury votes to indict John and Patsy Ramsey for permitting child abuse; DA Alex Hunter refuses to sign, determining evidence insufficient to prove beyond reasonable doubt at trial."
+          },
+          {
+            "date": "July 2008",
+            "title": "Touch-DNA Matches Foreign Profile",
+            "detail": "Testing of newly swabbed areas on the waistband reveals matching unknown male alleles, leading District Attorney Mary Lacy to issue an official apology and exoneration letter."
+          },
+          {
+            "date": "December 2022",
+            "title": "Boulder Police Cold Case DNA Audit",
+            "detail": "Boulder PD announces partnership with the Colorado Cold Case Review Team to apply modern forensic genetic genealogy to surviving biological evidence."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "Boulder County District Court (20th Judicial District of Colorado)",
+        "presidingJudge": "Chief Judge Roxanne Bailin (Supervising 1999 Grand Jury)",
+        "charges": [
+          "No formal criminal trial ever held.",
+          "Grand Jury True Bill (1999, unsealed 2013): CRS 18-6-401 Child Abuse Resulting in Death (Never signed or prosecuted by DA)."
+        ],
+        "prosecutionArgument": "District Attorney Alex Hunter concluded on October 13, 1999 that there was insufficient admissible evidence to warrant a public prosecution or secure a unanimous conviction before a trial jury.",
+        "defenseArgument": "Ramsey defense counsel (Hal Haddon and Lin Wood) maintained innocence, pointing to DNA exclusion, forensic evidence of external entry, and catastrophic leaks from police leadership.",
+        "keyTestimonies": [
+          {
+            "witness": "Lou Smit",
+            "role": "DA Senior Investigator",
+            "keyPoints": "Testified before the grand jury demonstrating photographic evidence of basement window access, stun gun mark measurements, and foreign shoe print impressions."
+          },
+          {
+            "witness": "Dr. Henry Lee",
+            "role": "Renowned Forensic Scientist",
+            "keyPoints": "Analyzed crime scene preservation failures and verified foreign DNA mixtures on victim clothing."
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "September 15, 1998",
+            "title": "Grand Jury Impaneled",
+            "description": "Hears testimony from dozens of witnesses over 13 months."
+          },
+          {
+            "date": "October 13, 1999",
+            "title": "DA Hunter Declines Prosecution",
+            "description": "Announces grand jury dismissed without public indictments."
+          },
+          {
+            "date": "October 25, 2013",
+            "title": "Court Orders Unsealing of 1999 True Bills",
+            "description": "Judge Bailin orders release of four indictment pages revealing grand jury vote."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "October 13, 1999 (Grand Jury Dismissal) / Unsolved",
+        "pleaOrVerdict": "No Verdict / No Trial Conducted / Case Remains Open",
+        "sentencing": "None. No individuals ever convicted in court.",
+        "appealsAndRulings": "Civil defamation settlements achieved against multiple media outlets regarding false accusations.",
+        "unresolvedLegalQuestions": "Whether modern next-generation SNP sequencing and forensic genetic genealogy can resolve the unidentified male CODIS profile."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "Revisions to Colorado municipal crime scene containment and multi-agency homicide protocols",
+          "Colorado Cold Case Database Task Force establishment",
+          "Heightened judicial standards regarding grand jury secrecy and unsealing of true bills"
+        ],
+        "institutionalImpact": "Resignation of Boulder Police Chief Tom Koby and District Attorney Alex Hunter; widespread overhaul of child homicide investigative training nationwide.",
+        "victimAdvocacy": "Creation of the JonBenét Ramsey Children’s Foundation and ongoing legal campaigns for independent federal review.",
+        "currentStatus": "Unsolved cold case. Active investigation maintained by the Boulder Police Department."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How did immediate crime scene contamination permanently compromise physical evidence?",
+          "context": "Dozens of family friends and non-forensic personnel were permitted into the home before a forensic sweep.",
+          "legalOrEthicalIssue": "The balance between victim compassion and rigid crime scene containment protocols."
+        },
+        {
+          "question": "What ethical dilemmas arise when a Grand Jury votes to indict but the prosecutor refuses to sign?",
+          "context": "DA Alex Hunter believed the state could not meet the constitutional standard of proof beyond a reasonable doubt.",
+          "legalOrEthicalIssue": "The division of power between citizen grand juries and executive prosecutorial discretion."
+        }
+      ],
+      "citations": [
+        {
+          "title": "Boulder County Grand Jury True Bill (CRS 18-6-401)",
+          "source": "Boulder County District Court Records (Unsealed October 2013)",
+          "date": "October 1999"
+        },
+        {
+          "title": "Boulder County Coroner Autopsy Report #96A-155 (Dr. John Meyer)",
+          "source": "Boulder County Coroner Office Public Record",
+          "date": "December 27, 1996"
+        },
+        {
+          "title": "Official Exoneration Correspondence of District Attorney Mary T. Lacy",
+          "source": "Boulder County District Attorney’s Office",
+          "date": "July 9, 2008"
+        }
+      ],
+      "createdAt": "2026-01-05T00:00:00Z",
+      "updatedAt": "2026-03-01T00:00:00Z"
+    },
+    {
+      "id": "case-002-gsk",
+      "slug": "golden-state-killer-deangelo",
+      "caseNumber": "DOCKET-002-CA-1974",
+      "title": "CASE 002 — THE GOLDEN STATE KILLER",
+      "subtitle": "Joint Multi-Jurisdiction Casework: The 44-Year Manhunt for the East Area Rapist & Forensic Genealogy Breakthrough",
+      "category": "Homicide",
+      "location": "Sacramento, Contra Costa & Orange Counties, California",
+      "year": 1974,
+      "status": "Convicted",
+      "isPublished": true,
+      "isFeatured": true,
+      "contentWarnings": [
+        "Serial homicide and home invasion assaults",
+        "Complex multi-jurisdictional cold case",
+        "Pioneering forensic genetic genealogy"
+      ],
+      "summary": "Between 1974 and 1986, an unidentified perpetrator committed at least 13 murders, over 50 rapes, and 120 burglaries across ten California counties. Operating under monikers including the Visalia Ransacker, the East Area Rapist, and the Original Night Stalker, the offender evaded detection for over four decades. In 2018, cold case investigators utilized investigative genetic genealogy (IGG) to compare crime scene DNA against open consumer genealogical databases, leading to former police officer Joseph James DeAngelo.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "Operating predominantly in residential suburban subdivisions, the perpetrator demonstrated sophisticated knowledge of law enforcement shift patterns, tactical weapons handling, and counter-surveillance. For over twenty years, state investigators believed the Northern California rapist and Southern California serial killer were distinct criminals until DNA profiling linked the cases in 2001.",
+        "victimInfo": "Thirteen confirmed murder victims and over fifty documented survivors across Sacramento, Contra Costa, San Joaquin, Stanislaus, Santa Clara, Alameda, Santa Barbara, and Orange counties.",
+        "jurisdiction": "California Department of Justice, Sacramento County Sheriff, Orange County DA, Contra Costa Sheriff, and FBI Sacramento Field Office.",
+        "initialAlertDate": "June 18, 1976 (First confirmed East Area Rapist assault in Rancho Cordova, CA)"
+      },
+      "incident": {
+        "narrative": "The attacker methodically cased targeted homes days in advance, entering to unbolt windows, remove bullets from household handguns, and pre-position ligature cords under sofa cushions. During nighttime attacks, he awakened occupants with blinding flashlights, forced victims onto their stomachs, and balanced ceramic dishes on the male partner’s back with warnings of immediate execution if sounds were heard.",
+        "timeline": [
+          {
+            "date": "September 11, 1975",
+            "title": "Murder of Professor Claude Snelling",
+            "description": "Visalia Ransacker shoots Claude Snelling while preventing the abduction of Snelling’s teenage daughter.",
+            "source": "Visalia Police Case Record #75-1044"
+          },
+          {
+            "date": "February 2, 1978",
+            "title": "Murders of Brian and Katie Maggiore",
+            "description": "Air Force sergeant and his wife executed in Rancho Cordova while walking their dog.",
+            "source": "Sacramento County Sheriff Incident Log"
+          },
+          {
+            "date": "May 4, 1986",
+            "title": "Murder of Janelle Cruz",
+            "description": "Final known crime committed in Irvine, California; biological specimen preserved at minus-20 degrees.",
+            "source": "Orange County Sheriff Crime Lab Report"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "In 2001, Orange County crime lab director Paul Holes utilized emerging STR typing to prove the East Area Rapist and Original Night Stalker were the same genetic individual. With the CODIS database producing no offender matches over 17 years, Holes collaborated with genealogist Dr. Barbara Rae-Venter in 2017 to convert biological DNA into 600,000 single nucleotide polymorphisms (SNPs) and search public genealogy databases, constructing extensive family trees spanning back to the 1800s.",
+        "procedureNotes": "Public database GEDmatch and FamilyTreeDNA records utilized under fourth amendment third-party doctrine. Abandoned DNA collected from DeAngelo’s vehicle door handle outside a Hobby Lobby and a discarded tissue.",
+        "interviewRecordsSummary": "Thousands of archival interview transcripts reviewed. Consistent witness recollections noted athletic agility, specialized maritime diamond knots, and tactical terminology.",
+        "timeline": [
+          {
+            "date": "Spring 2001",
+            "title": "DNA Links North & South California Cases",
+            "description": "Forensic scientist Paul Holes links EAR rape kits with ONS murder evidence via STR profiles.",
+            "source": "California Department of Justice Crime Lab Bulletin"
+          },
+          {
+            "date": "March 2018",
+            "title": "Genealogical Tree Identifies DeAngelo",
+            "description": "Investigative team narrows tree of thousands of descendants to Joseph James DeAngelo based on age and geographic proximity.",
+            "source": "Sacramento DA Investigative Summary"
+          },
+          {
+            "date": "April 24, 2018",
+            "title": "100% Forensic DNA Match & Arrest",
+            "description": "Confirmatory DNA analysis matches DeAngelo at 1-in-several-sextillion probability; arrest executed in Citrus Heights.",
+            "source": "Joint Federal and State Press Briefing"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-gsk-01",
+          "exhibitNumber": "VENTURA-EXHIBIT-DNA",
+          "title": "Lyman & Charlene Smith Crime Scene Specimen (Ventura, 1980)",
+          "type": "forensic",
+          "description": "Frozen biological evidence preserved for 38 years. Provided high-integrity nuclear DNA enabling dense SNP microarray genotyping.",
+          "significance": "The definitive scientific benchmark that broke the 44-year cold case and conclusively matched DeAngelo.",
+          "recoveredAt": "March 1980 / Re-analyzed 2018",
+          "recoveredBy": "Ventura County Coroner Lab",
+          "classification": "Public Record"
+        },
+        {
+          "id": "ev-gsk-02",
+          "exhibitNumber": "EXHIBIT-LIGATURE-04",
+          "title": "Braided Ligature Cords & Diamond Knot Ties",
+          "type": "physical",
+          "description": "Braided nylon cords recovered across multiple crime scenes tied in distinctive diamond knots characteristic of naval rigging.",
+          "significance": "Corroborated DeAngelo’s naval background aboard the USS Piedmont during the Vietnam War.",
+          "recoveredAt": "1976-1981",
+          "recoveredBy": "Contra Costa County Sheriff Evidence Vault",
+          "classification": "Confidential"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-deangelo",
+          "name": "Joseph James DeAngelo Jr.",
+          "alias": "The Golden State Killer / East Area Rapist / Visalia Ransacker",
+          "role": "Defendant / Former Police Officer",
+          "status": "Convicted",
+          "background": "Former Exeter and Auburn police officer; Navy veteran; worked 27 years as a distribution mechanic until retirement.",
+          "verifiedFindings": "Pleaded guilty in open court to 13 counts of first-degree murder with special circumstances and admitted to 62 uncharged offenses.",
+          "allegations": "Leveraged active law enforcement training, radio scanners, and night-vision techniques to commit crimes without apprehension.",
+          "outcome": "Sentenced to consecutive life sentences without the possibility of parole. Currently incarcerated at California State Prison, Corcoran."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The historic deployment of Investigative Genetic Genealogy (IGG) bridged forensic science and civilian consumer genealogy, proving that biological cold cases can be resolved even when the perpetrator has no prior felony record in CODIS.",
+        "turningPoints": [
+          {
+            "date": "April 2018",
+            "title": "3rd-Cousin Match on GEDmatch",
+            "detail": "Genealogists discovered matches sharing ~2-3% DNA, establishing ancestral great-great-great grandparents."
+          },
+          {
+            "date": "April 23, 2018",
+            "title": "Surreptitious DNA Capture",
+            "detail": "Undercover detectives swabbed car handle and discarded paper towel, confirming exact forensic match."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "Sacramento County Superior Court (Convened at Sacramento State University Ballroom)",
+        "presidingJudge": "Judge Michael Bowman",
+        "charges": [
+          "13 counts of First-Degree Murder with Special Circumstances (Lying in wait, rape, and burglary)",
+          "13 counts of Kidnapping to Commit Robbery"
+        ],
+        "prosecutionArgument": "A historic multi-county coalition of prosecutors presented overwhelming forensic certainty, documenting four decades of calculated terror across California communities.",
+        "defenseArgument": "Public defenders negotiated a comprehensive plea agreement avoiding the death penalty in exchange for admitting guilt to all charged and uncharged offenses.",
+        "keyTestimonies": [
+          {
+            "witness": "Surviving Victims & Family Members (Over 40 Witnesses)",
+            "role": "Victim Impact Panels",
+            "keyPoints": "Delivered three consecutive days of public testimony, breaking decades of silence and confronting DeAngelo directly."
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "June 29, 2020",
+            "title": "Guilty Plea Hearing",
+            "description": "DeAngelo speaks word \"Guilty\" 26 consecutive times in open court."
+          },
+          {
+            "date": "August 21, 2020",
+            "title": "Formal Sentencing",
+            "description": "Sentenced to life imprisonment without possibility of parole."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "August 21, 2020",
+        "pleaOrVerdict": "Guilty Plea to 13 counts of First-Degree Murder and 13 counts of Kidnapping",
+        "sentencing": "Multiple consecutive life terms without parole, plus eight years.",
+        "appealsAndRulings": "Waived all appellate rights pursuant to the binding plea agreement.",
+        "unresolvedLegalQuestions": "Catalyzed nationwide state and federal regulations governing privacy thresholds for consumer DNA databases."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "United States Department of Justice Interim Policy on Forensic Genetic Genealogical DNA Analysis (November 2019)",
+          "California Department of Justice IGG Oversight Standards",
+          "Informed consent regulations for commercial consumer genetic registries (FTC enforcement)"
+        ],
+        "institutionalImpact": "Established forensic genetic genealogy as a recognized law enforcement discipline, solving hundreds of subsequent cold cases.",
+        "victimAdvocacy": "Memorialized by late investigative author Michelle McNamara (\"I’ll Be Gone in the Dark\").",
+        "currentStatus": "DeAngelo is serving his life sentence at California State Prison, Corcoran."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How do privacy rights in commercial genetic databases balance against solving violent cold crimes?",
+          "context": "DeAngelo was caught through distant relatives who had voluntarily uploaded DNA to ancestry tracing services.",
+          "legalOrEthicalIssue": "Fourth Amendment expectations of privacy in third-party genetic databases."
+        }
+      ],
+      "citations": [
+        {
+          "title": "People of the State of California v. Joseph James DeAngelo, Case #18FE008012",
+          "source": "Sacramento County Superior Court Record Transcript",
+          "date": "2020"
+        },
+        {
+          "title": "DOJ Interim Policy: Forensic Genetic Genealogical DNA Analysis and Searching",
+          "source": "United States Department of Justice",
+          "date": "November 2019"
+        }
+      ],
+      "createdAt": "2026-01-10T00:00:00Z",
+      "updatedAt": "2026-03-01T00:00:00Z"
+    },
+    {
+      "id": "case-003-petito",
+      "slug": "gabby-petito-brian-laundrie",
+      "caseNumber": "DOCKET-003-WY-2021",
+      "title": "CASE 003 — GABBY PETITO",
+      "subtitle": "FBI Denver Case #WY-21-09: Missing Person Investigation, Digital Crowdsourcing & Domestic Violence Casework",
+      "category": "Missing Persons",
+      "location": "Moab, UT, Grand Teton, WY & North Port, FL",
+      "year": 2021,
+      "status": "Solved",
+      "isPublished": true,
+      "isFeatured": true,
+      "contentWarnings": [
+        "Documented domestic violence and homicide",
+        "Digital forensics and location data tracking",
+        "Sensitive treatment of survivor legacy"
+      ],
+      "summary": "In July 2021, 22-year-old travel vlogger Gabrielle \"Gabby\" Petito departed on a cross-country van trip with fiancé Brian Laundrie. On September 1, Laundrie returned alone to his family home in North Port, Florida with Petito’s van and invoked his Fifth Amendment right to silence. Following an unprecedented digital manhunt driven by bodycam footage, social media travel logs, and tourist dashcam sightings, Petito’s remains were recovered in Bridger-Teton National Forest on September 19, 2021. Laundrie subsequently died by suicide in a Florida nature reserve, leaving behind written confession notes claiming responsibility.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "Gabby Petito and Brian Laundrie were childhood acquaintances from Blue Point, New York who began dating in 2019 and moved to Florida. In summer 2021, they embarked on a planned four-month road trip visiting western national parks in Petito’s converted 2012 Ford Transit Connect van, documenting their travels on YouTube and Instagram.",
+        "victimInfo": "Gabrielle Venora Petito, aged 22. Autopsy by Teton County Coroner Dr. Brent Blue determined manner of death was homicide caused by manual strangulation/throttling, estimated to have occurred 3–4 weeks prior to body recovery.",
+        "jurisdiction": "Federal Bureau of Investigation (Denver and Tampa Field Offices), National Park Service, Teton County Sheriff, Moab City Police Department, and North Port Police Department.",
+        "initialAlertDate": "September 11, 2021 (Missing person report filed with Suffolk County Police, NY by Nichole Schmidt)"
+      },
+      "incident": {
+        "narrative": "On August 12, 2021, Moab City Police responded to a 911 call reporting a domestic altercation between Petito and Laundrie outside the Moonflower Community Cooperative. Bodycam footage showed Petito distressed and crying; officers classified the dispute as a mental health crisis rather than a domestic assault, separating the couple for the night. The final verbal telephone contact between Petito and her mother occurred on August 25. An unusual text message was sent from Petito’s phone on August 27 referencing \"Stan\" (her grandfather), which family members recognized as uncharacteristic. On September 1, Laundrie drove Petito’s van back to Florida alone.",
+        "timeline": [
+          {
+            "date": "August 12, 2021",
+            "title": "Moab Police Domestic Dispute Traffic Stop",
+            "description": "Officers pull over Ford Transit after 911 caller witnesses physical altercation; officers separate couple for one night.",
+            "source": "Moab Police Department Bodycam Video Record"
+          },
+          {
+            "date": "August 27, 2021",
+            "title": "Last Confirmed Sightings in Jackson, WY",
+            "description": "Couple seen in Merry Piglets restaurant in Jackson; tourist dashcam spots van near Spread Creek Dispersed Camping Area.",
+            "source": "FBI Witness Interview Transcripts"
+          },
+          {
+            "date": "September 1, 2021",
+            "title": "Laundrie Returns to Florida Alone",
+            "description": "Laundrie arrives at parents’ home in North Port, FL driving Petito’s van; parents decline to speak with Petito family.",
+            "source": "North Port Police Automated License Plate Reader Records"
+          },
+          {
+            "date": "September 11, 2021",
+            "title": "Official Missing Person Report Filed",
+            "description": "Petito’s mother files formal missing person report after ten days of silence.",
+            "source": "Suffolk County Police Department Incident Report"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "The FBI launched a massive search across Grand Teton National Park while North Port Police placed Laundrie under surveillance. On September 13, Laundrie left his residence and disappeared into the 25,000-acre Carlton Reserve. On September 19, search teams located Petito’s remains in an undeveloped campsite near Spread Creek. On October 20, investigators searching receding floodwaters in Myakkahatchee Creek Environmental Park recovered Laundrie’s skeletal remains, a revolver, and a waterproof notebook containing his handwritten confession.",
+        "procedureNotes": "Cellular tower triangulation, Apple iCloud geolocational metadata extraction, and social media digital forensics led directly to the campsite search area.",
+        "interviewRecordsSummary": "Dozens of cross-country tourist interviews conducted by FBI Special Agents, including eyewitnesses who gave Laundrie rides while hitchhiking in Colter Bay on August 29.",
+        "timeline": [
+          {
+            "date": "September 19, 2021",
+            "title": "Discovery of Petito’s Remains",
+            "description": "Search teams locate human remains matching Petito in Bridger-Teton National Forest.",
+            "source": "FBI Denver Press Briefing"
+          },
+          {
+            "date": "September 22, 2021",
+            "title": "Federal Arrest Warrant Issued for Laundrie",
+            "description": "U.S. District Court for District of Wyoming issues arrest warrant for unauthorized debit card use.",
+            "source": "U.S. District Court Indictment #21-CR-117-SWS"
+          },
+          {
+            "date": "October 20, 2021",
+            "title": "Laundrie’s Remains & Notebook Recovered",
+            "description": "Remains identified via dental records; water-damaged notebook contains confession admitting responsibility for Petito’s death.",
+            "source": "FBI Denver Final Investigative Summary (Jan 2022)"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-petito-01",
+          "exhibitNumber": "FBI-EXHIBIT-NOTEBOOK",
+          "title": "Brian Laundrie’s Waterproof Journal & Handwritten Confession",
+          "type": "document",
+          "description": "Spiral-bound waterproof notebook recovered from Carlton Reserve. Laundrie wrote: \"I ended her life. I thought it was merciful, that it is what she wanted, but I see now all the mistakes I made.\"",
+          "significance": "Conclusive direct admission of homicide, providing formal investigative closure in the absence of a criminal trial.",
+          "recoveredAt": "October 20, 2021",
+          "recoveredBy": "FBI Tampa Evidence Response Team",
+          "classification": "Public Record"
+        },
+        {
+          "id": "ev-petito-02",
+          "exhibitNumber": "MOAB-VIDEO-BODYCAM",
+          "title": "Moab Police Body-Worn Camera Recordings (August 12, 2021)",
+          "type": "digital",
+          "description": "77 minutes of high-definition bodycam footage documenting physical marks on Petito’s face and arm, and conflicting officer assessments.",
+          "significance": "Catalyzed national legislative reviews regarding officer lethality assessments and domestic violence screening protocols.",
+          "recoveredAt": "August 12, 2021 / Released September 2021",
+          "recoveredBy": "Moab City Police Department",
+          "classification": "Public Record"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-laundrie",
+          "name": "Brian Christopher Laundrie",
+          "alias": "Brian Laundrie",
+          "role": "Sole Person of Interest / Perpetrator",
+          "status": "Deceased",
+          "background": "Fiancé of victim; 23 years old; companion on cross-country road trip.",
+          "verifiedFindings": "FBI Denver concluded Laundrie was solely responsible for Petito’s death based on physical evidence, cell records, and his written notebook confession.",
+          "allegations": "Fled to Florida, refused communication with law enforcement, and committed unauthorized ATM withdrawals totaling over $1,000 using Petito’s debit card.",
+          "outcome": "Died of a self-inflicted gunshot wound in Myakkahatchee Creek Environmental Park; case officially closed by the FBI in January 2022."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The primary breakthrough emerged from civilian digital crowdsourcing: travel vloggers Tim and Jenn Bethune reviewed their GoPro dashboard footage from August 27 and spotted Petito’s white Ford Transit van parked with Florida plates at Spread Creek, providing the exact coordinates where search teams discovered her remains.",
+        "turningPoints": [
+          {
+            "date": "September 18, 2021",
+            "title": "Dashcam Video Spottings Verified by FBI",
+            "detail": "Vloggers contact FBI after recognizing the van from news reports, narrowing a multi-million-acre wilderness to a specific drainage area."
+          },
+          {
+            "date": "January 21, 2022",
+            "title": "FBI Releases Final Investigative Report",
+            "detail": "FBI Denver announces comprehensive conclusion of inquiry with confirmation of notebook admission and debit card transactions."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "U.S. District Court for the District of Wyoming (Federal Criminal Jurisdiction) & Sarasota County Circuit Court (Civil)",
+        "presidingJudge": "U.S. Magistrate Judge Scott W. Skavdahl (Federal) / Judge Hunter W. Carroll (Civil)",
+        "charges": [
+          "18 U.S.C. § 1029(a)(2) - Fraudulent Use of an Access Device (Federal Indictment returned against Laundrie prior to death).",
+          "No homicide trial held due to perpetrator suicide."
+        ],
+        "prosecutionArgument": "Federal prosecutors established probable cause for unauthorized interstate debit card usage while preparing felony murder charges prior to the recovery of Laundrie’s remains.",
+        "defenseArgument": "Laundrie’s family retained attorney Steven Bertolino, who advised the family to invoke their Fifth Amendment rights and decline voluntary statements.",
+        "keyTestimonies": [
+          {
+            "witness": "Dr. Brent Blue",
+            "role": "Teton County Coroner",
+            "keyPoints": "Conducted forensic pathology autopsy, verifying victim died of manual strangulation and blunt-force facial trauma."
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "September 22, 2021",
+            "title": "Federal Grand Jury Indictment",
+            "description": "Federal warrant issued for Brian Laundrie."
+          },
+          {
+            "date": "November 2022",
+            "title": "Civil Wrongful Death Settlement",
+            "description": "Petito family awarded $3 million civil settlement against Laundrie estate."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "January 21, 2022 (FBI Case Closure) / No Criminal Verdict",
+        "pleaOrVerdict": "Perpetrator Deceased / Investigation Closed with Sole Perpetrator Identification",
+        "sentencing": "None (Perpetrator deceased). Civil damages judgment awarded against estate.",
+        "appealsAndRulings": "No criminal appeals applicable.",
+        "unresolvedLegalQuestions": "Civil lawsuits filed against the Moab Police Department alleging improper domestic violence lethality assessment and failure to protect."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "The Federal Gabby Petito Act (introduced to mandate standardized domestic violence lethality assessments across law enforcement agencies)",
+          "Comprehensive overhaul of Moab Police Department domestic violence protocols and mandatory bodycam audit policies",
+          "Increased awareness regarding the \"Missing White Woman Syndrome\" and disparate media attention for missing indigenous women in Wyoming"
+        ],
+        "institutionalImpact": "Establishment of the Gabby Petito Foundation supporting domestic violence prevention and missing person search efforts.",
+        "victimAdvocacy": "Widespread adoption of the \"Lethality Assessment Program\" (LAP) by municipal police departments across the US.",
+        "currentStatus": "Criminal case officially closed by the FBI. Ongoing civil litigation and foundation advocacy."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How did law enforcement’s assessment of the August 12 domestic dispute highlight systemic training gaps?",
+          "context": "Officers treated the incident as a mental health crisis and separated the couple without filing misdemeanor charges.",
+          "legalOrEthicalIssue": "The efficacy of lethality assessment screening tools in identifying imminent domestic homicide risk."
+        },
+        {
+          "question": "What role did public crowdsourced video play in narrowing an otherwise vast wilderness search?",
+          "context": "A tourist couple reviewing vacation GoPro footage provided the exact coordinates that located the victim.",
+          "legalOrEthicalIssue": "The coordination of civilian digital intelligence with federal investigative protocols."
+        }
+      ],
+      "citations": [
+        {
+          "title": "FBI Denver Final Investigative Update on Gabrielle Petito Investigation",
+          "source": "Federal Bureau of Investigation Public Release",
+          "date": "January 21, 2022"
+        },
+        {
+          "title": "United States of America v. Brian Christopher Laundrie, Indictment 21-CR-117-SWS",
+          "source": "U.S. District Court for the District of Wyoming",
+          "date": "September 2021"
+        },
+        {
+          "title": "Independent Investigative Report on the Moab Police Department (City of Moab)",
+          "source": "Price City Police Department Internal Review",
+          "date": "January 2022"
+        }
+      ],
+      "createdAt": "2026-01-15T00:00:00Z",
+      "updatedAt": "2026-03-01T00:00:00Z"
+    },
+    {
+      "id": "case-gsk-2018",
+      "slug": "golden-state-killer-joseph-deangelo",
+      "caseNumber": "FD-302-CA-19741",
+      "title": "The Golden State Killer: Investigative Genetic Genealogy Casework",
+      "subtitle": "The 44-year cold case manhunt across California and the birth of forensic genetic genealogy",
+      "category": "Homicide",
+      "location": "Sacramento, Contra Costa & Orange Counties, California",
+      "year": 2018,
+      "status": "Convicted",
+      "isPublished": true,
+      "isFeatured": true,
+      "contentWarnings": [
+        "Violent home invasions and homicides",
+        "Serial sexual assault",
+        "Procedural cold case forensic analysis"
+      ],
+      "summary": "The multi-decade investigation into the \"Visalia Ransacker,\" \"East Area Rapist,\" and \"Original Night Stalker\" who terrorized California between 1974 and 1986. Solved in 2018 through revolutionary investigative genetic genealogy comparing crime scene DNA with commercial genetic databases, leading to former police officer Joseph James DeAngelo.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "Between 1974 and 1986, an unidentified perpetrator committed at least 13 murders, 51 rapes, and over 120 burglaries across ten California counties. Operating with military-grade reconnaissance, ligature restraints, and psychological terror, the perpetrator baffled local and state investigators for decades.",
+        "victimInfo": "Dozens of surviving victims, families of 13 murder victims including Brian and Katie Maggiore, Lyman and Charlene Smith, and Janelle Cruz.",
+        "jurisdiction": "Sacramento County Superior Court, representing a multi-county joint prosecution (Sacramento, Orange, Ventura, Santa Barbara).",
+        "initialAlertDate": "June 1976 (First documented East Area Rapist assault in Rancho Cordova)"
+      },
+      "incident": {
+        "narrative": "The perpetrator utilized meticulous advance surveillance, disabling outdoor lighting, entering residences days before attacks to unload handguns, and awakening victims by shining flashlights into their eyes. He forced female victims to bind male partners with shoelaces, balancing dishes on the men’s backs while threatening execution if a sound was heard.",
+        "timeline": [
+          {
+            "date": "September 11, 1975",
+            "title": "Murder of Professor Claude Snelling",
+            "description": "Visalia Ransacker shoots Claude Snelling during attempted abduction of Snelling’s daughter.",
+            "source": "Visalia Police Department Records"
+          },
+          {
+            "date": "February 2, 1978",
+            "title": "Murders of Brian and Katie Maggiore",
+            "description": "Young couple executed in Rancho Cordova while walking their dog after confronting the masked prowler.",
+            "source": "Sacramento County Sheriff’s Office"
+          },
+          {
+            "date": "May 4, 1986",
+            "title": "Murder of Janelle Cruz (Final Known Crime)",
+            "description": "18-year-old Janelle Cruz murdered in Irvine; case goes cold with biological evidence preserved.",
+            "source": "Orange County District Attorney Cold Case Unit"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "In 2001, DNA profiling linked the Northern California East Area Rapist cases to the Southern California Original Night Stalker murders, establishing they were the same individual. In 2017, investigator Paul Holes, with genetic genealogist Barbara Rae-Venter and the FBI Sacramento Field Office, uploaded crime scene STR/SNP profiles to GEDmatch, assembling extensive family trees spanning back to the early 1800s.",
+        "procedureNotes": "Innovative conversion of forensic STR DNA profiles into high-density SNP arrays (single nucleotide polymorphisms) compatible with public genealogical platforms.",
+        "interviewRecordsSummary": "Over four decades of witness interviews documented consistent descriptions: athletic build, knowledge of police procedures, specific knots (diamond knot), and bicycle getaways.",
+        "timeline": [
+          {
+            "date": "March 2018",
+            "title": "Family Tree Narrows to Single Subject",
+            "description": "Genetic genealogy team identifies Joseph James DeAngelo based on age, geographic presence, and law enforcement background.",
+            "source": "Sacramento County DA Case Briefing"
+          },
+          {
+            "date": "April 18, 2018",
+            "title": "Surreptitious DNA Collection",
+            "description": "Investigators recover abandoned DNA from DeAngelo’s vehicle door handle and a discarded tissue in Citrus Heights.",
+            "source": "Sacramento County Crime Lab Report"
+          },
+          {
+            "date": "April 24, 2018",
+            "title": "100% Forensic DNA Match & Arrest",
+            "description": "Crime lab confirms match to crime scene profile; tactical units arrest DeAngelo in his driveway.",
+            "source": "Sacramento Sheriff Scott Jones Press Conference"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-gsk-01",
+          "exhibitNumber": "FORENSIC-CRIME-LAB-A",
+          "title": "Ventura County Crime Scene Semen Specimen (Lyman/Charlene Smith Case)",
+          "type": "forensic",
+          "description": "Biological material frozen and preserved since 1980. Yielded pristine nuclear DNA profile enabling SNP genotyping 38 years later.",
+          "significance": "The definitive scientific link connecting the historic cold cases to DeAngelo’s reference profile.",
+          "recoveredAt": "March 1980",
+          "recoveredBy": "Ventura County Coroner Office",
+          "classification": "Public Record"
+        },
+        {
+          "id": "ev-gsk-02",
+          "exhibitNumber": "EXHIBIT-AUTO-09",
+          "title": "Citrus Heights Recovered Genetic Reference Sample",
+          "type": "forensic",
+          "description": "DNA swabs obtained from the exterior door handle of DeAngelo’s car parked at a public hobby store.",
+          "significance": "Satisfied fourth amendment abandonment doctrine, providing probable cause for arrest warrant.",
+          "recoveredAt": "April 2018",
+          "recoveredBy": "Sacramento Surveillance Unit",
+          "classification": "Grand Jury Exhibit"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-deangelo",
+          "name": "Joseph James DeAngelo Jr.",
+          "alias": "The Golden State Killer / East Area Rapist",
+          "role": "Defendant / Former Police Officer",
+          "status": "Convicted",
+          "background": "Former Exeter and Auburn police officer; Vietnam War Navy veteran; worked as a truck mechanic for 27 years until retirement.",
+          "verifiedFindings": "Pleaded guilty to 13 counts of first-degree murder with special circumstances and admitted to 62 uncharged offenses.",
+          "allegations": "Avoided detection for 44 years utilizing training in law enforcement evidence procedures.",
+          "outcome": "Sentenced to consecutive life sentences without the possibility of parole; incarcerated at California State Prison, Corcoran."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The deployment of Investigative Genetic Genealogy (IGG) bridged forensic science and genealogical research, proving that decades-old cold cases could be solved even when the perpetrator had no prior felony DNA in CODIS.",
+        "turningPoints": [
+          {
+            "date": "April 2018",
+            "title": "GEDmatch 3rd-Cousin Match",
+            "detail": "Genealogists discovered two matches sharing approximately 2-3% DNA, establishing great-great-great grandparents from the 1800s."
+          },
+          {
+            "date": "April 23, 2018",
+            "title": "Elimination of Other Relatives",
+            "detail": "Targeted demographic filtering eliminated cousins who were female, the wrong age, or living out of state."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "Sacramento County Superior Court (Sacramento State University Ballroom venue)",
+        "presidingJudge": "Judge Michael Bowman",
+        "charges": [
+          "13 counts of First-Degree Murder with Special Circumstances (Lying in wait, during commission of rape and burglary)",
+          "13 counts of Kidnapping to Commit Robbery"
+        ],
+        "prosecutionArgument": "A unified joint prosecution from six California counties presented overwhelming forensic certainty and detailed victim testimony demonstrating an uninterrupted campaign of terror.",
+        "defenseArgument": "In exchange for the state withdrawing the death penalty, DeAngelo entered full guilty pleas and formally admitted guilt for all uncharged rapes past the statute of limitations.",
+        "keyTestimonies": [
+          {
+            "witness": "Surviving Victims and Family Members (Over 40 Witnesses)",
+            "role": "Victim Impact Panels",
+            "keyPoints": "Delivered three days of direct confrontation, addressing the long psychological aftermath and celebrating the persistence of cold case detectives."
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "June 29, 2020",
+            "title": "Historic Plea Agreement",
+            "description": "DeAngelo enters guilty pleas in open court, repeatedly uttering \"Guilty\" to 26 felony counts."
+          },
+          {
+            "date": "August 21, 2020",
+            "title": "Formal Sentencing",
+            "description": "Sentenced to life imprisonment without the possibility of parole."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "August 21, 2020",
+        "pleaOrVerdict": "Guilty Plea to 13 counts of first-degree murder and 13 counts of kidnapping",
+        "sentencing": "Multiple consecutive life sentences without parole, plus 8 years.",
+        "appealsAndRulings": "DeAngelo waived all rights to appeal as part of the negotiated plea agreement.",
+        "unresolvedLegalQuestions": "Spurred ongoing privacy policy changes across consumer genetic testing companies (FTC and DOJ guidelines)."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "Establishment of the California Department of Justice Investigative Genetic Genealogy Guidelines (2019)",
+          "DOJ Interim Policy on Forensic Genetic Genealogical DNA Analysis (effective November 2019)",
+          "Informed consent standards for public and commercial consumer genealogy databases"
+        ],
+        "institutionalImpact": "Created a new global discipline in law enforcement; hundreds of cold cases previously considered insoluble have since been resolved.",
+        "victimAdvocacy": "Pioneered survivor support networks spearheaded by Michelle McNamara’s investigative journalism (\"I’ll Be Gone in the Dark\").",
+        "currentStatus": "DeAngelo is serving his life sentence at California State Prison, Corcoran."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How do privacy rights in commercial genetic databases balance against solving violent cold crimes?",
+          "context": "Investigators solved the case using family member DNA who had voluntarily uploaded profiles for ancestry tracing.",
+          "legalOrEthicalIssue": "Fourth Amendment expectations of privacy in third-party recreational genetic data."
+        }
+      ],
+      "citations": [
+        {
+          "title": "People of the State of California v. Joseph James DeAngelo, Case No. 18FE008012",
+          "source": "Sacramento County Superior Court Record",
+          "date": "2020"
+        },
+        {
+          "title": "DOJ Interim Policy: Forensic Genetic Genealogical DNA Analysis and Searching",
+          "source": "United States Department of Justice",
+          "date": "November 2019"
+        }
+      ],
+      "createdAt": "2026-01-20T09:00:00Z",
+      "updatedAt": "2026-03-02T11:45:00Z"
+    },
+    {
+      "id": "case-nassar-2016",
+      "slug": "larry-nassar-usa-gymnastics",
+      "caseNumber": "FD-302-MI-84920",
+      "title": "The USA Gymnastics & MSU Medical Casework",
+      "subtitle": "Investigation into systemic medical abuse, institutional suppression, and the largest survivor testimony in federal history",
+      "category": "Crimes Against Children",
+      "location": "Lansing, Michigan & Indianapolis, Indiana",
+      "year": 2016,
+      "status": "Convicted",
+      "isPublished": true,
+      "isFeatured": true,
+      "contentWarnings": [
+        "Documented institutional sexual abuse",
+        "Medical manipulation of minors",
+        "Non-graphic factual procedural reporting"
+      ],
+      "summary": "A multi-agency investigation following an Indianapolis Star journalistic inquiry into USA Gymnastics, exposing decades of sexual abuse masked as osteopathic medical treatment at Michigan State University and the Karolyi Ranch, leading to over 150 survivor impact statements, federal child exploitation convictions, and extensive congressional investigations into institutional complicity.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "Larry Nassar served as the national medical coordinator for USA Gymnastics (USAG) and associate professor at Michigan State University (MSU) for over two decades. Under the guise of proprietary \"intrapelvic osteopathic manipulations,\" Nassar abused hundreds of female athletes, predominantly minors under Olympic and collegiate training regimens.",
+        "victimInfo": "Over 330 identified survivors, including Olympic champions Aly Raisman, Simone Biles, McKayla Maroney, and early whistleblower Rachael Denhollander.",
+        "jurisdiction": "Eaton County, Ingham County (Michigan), Federal District Court for the Western District of Michigan, and the U.S. Department of Justice.",
+        "initialAlertDate": "August 4, 2016 (Indianapolis Star investigative report publication)"
+      },
+      "incident": {
+        "narrative": "Beginning as early as 1992 and continuing unabated until late 2016, Nassar used his position of medical authority to subject young athletes to invasive, unauthorized sexual contact without gloves or consent. Nassar repeatedly told athletes and their parents that these non-standard techniques were specialized procedures used exclusively on high-performance gymnasts. Internal complaints raised to MSU athletic training staff in 1997, 2004, and 2014 were systematically dismissed or closed without formal disciplinary action.",
+        "timeline": [
+          {
+            "date": "July 1997",
+            "title": "First Documented Athlete Complaint",
+            "description": "A 16-year-old gymnast reports Nassar’s conduct to MSU athletic training staff; staff member dismisses the complaint as a misunderstanding of osteopathic therapy.",
+            "source": "DOJ Office of the Inspector General Report (2021)"
+          },
+          {
+            "date": "July 28, 2015",
+            "title": "USA Gymnastics Leadership Briefed",
+            "description": "USAG President Steve Penny is notified by elite coaches of credible allegations against Nassar; USAG hires a private firm before contacting law enforcement after a five-week delay.",
+            "source": "Senate Judiciary Committee Testimony"
+          },
+          {
+            "date": "August 4, 2016",
+            "title": "The Indianapolis Star Investigation",
+            "description": "Reporters Marisa Kwiatkowski, Mark Alesia, and Tim Evans publish \"Out of Balance,\" detailing how USAG routinely failed to report allegations of sexual abuse by coaches.",
+            "source": "The Indianapolis Star"
+          },
+          {
+            "date": "August 16, 2016",
+            "title": "Rachael Denhollander Files Formal Police Report",
+            "description": "Former competitive gymnast Rachael Denhollander contacts the MSU Police Department, initiating the first formal criminal investigation by law enforcement.",
+            "source": "Ingham County Prosecutor Case Docket"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "The investigation rapidly expanded from a localized university police inquiry into a joint state and federal operation involving the Michigan Attorney General’s Office, the Michigan State Police, and the Federal Bureau of Investigation (Grand Rapids and Indianapolis Field Offices). Detectives executed search warrants on Nassar’s residence and university offices, seizing hard drives, medical logs, and over 37,000 illicit images of child sexual abuse material (CSAM). Simultaneously, interviews conducted under FD-302 protocols documented widespread institutional failures and delayed referrals within USAG leadership.",
+        "procedureNotes": "Joint Task Force operations conducted multi-jurisdictional evidence audits. Search warrants served under 18 U.S.C. § 2252. Critical procedural scrutiny was subsequently applied to the FBI Indianapolis Field Office for failing to formally open an investigation or interview victims for over eight months following the initial 2015 referral.",
+        "interviewRecordsSummary": "FD-302 interview documentation cataloged over 200 survivor interviews. Crucial corroborating interviews were obtained from pediatric orthopedists who confirmed Nassar’s claimed \"procedures\" had zero recognized medical validity.",
+        "timeline": [
+          {
+            "date": "September 20, 2016",
+            "title": "MSU Terminates Nassar",
+            "description": "MSU fires Nassar following mounting victim statements and an internal Title IX review determining clinical protocols were violated.",
+            "source": "MSU Official Statement"
+          },
+          {
+            "date": "November 22, 2016",
+            "title": "State Charges Filed & Initial Arrest",
+            "description": "Nassar is arrested by Michigan authorities on multiple felony charges of first-degree criminal sexual conduct.",
+            "source": "Michigan Attorney General Press Release"
+          },
+          {
+            "date": "December 13, 2016",
+            "title": "Federal Child Exploitation Indictment",
+            "description": "Federal grand jury charges Nassar with three counts of receiving, possessing, and destroying child sexual abuse material.",
+            "source": "U.S. Attorney’s Office, Western District of Michigan"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-nassar-01",
+          "exhibitNumber": "GOVT-EXHIBIT-14",
+          "title": "Seized Digital Storage Media (Western Digital 2TB Drive)",
+          "type": "digital",
+          "description": "Forensic extraction recovered 37,000+ files of child sexual abuse material, including encrypted folders Nassar attempted to scrub prior to executing search warrants.",
+          "significance": "Provided irrefutable federal predicate for immediate remand and severe federal sentencing guidelines.",
+          "recoveredAt": "September 2016",
+          "recoveredBy": "FBI Cyber Crime Task Force",
+          "classification": "Confidential"
+        },
+        {
+          "id": "ev-nassar-02",
+          "exhibitNumber": "FD-302-MEMO-71",
+          "title": "Pediatric Osteopathic Expert Witness Panel Affidavit",
+          "type": "document",
+          "description": "Sworn declarations from five board-certified pediatric orthopedic surgeons reviewing Nassar’s treatment logs. All five unanimously affirmed the described procedures had zero medical legitimacy and constituted non-consensual sexual battery.",
+          "significance": "Dismantled Nassar’s core defense that his conduct constituted \"legitimate, recognized physical therapy.\"",
+          "recoveredAt": "October 2016",
+          "recoveredBy": "Michigan State Police Major Case Unit",
+          "classification": "FD-302 Record"
+        },
+        {
+          "id": "ev-nassar-03",
+          "exhibitNumber": "EXHIBIT-DOC-89",
+          "title": "USA Gymnastics Internal Correspondence (2015)",
+          "type": "document",
+          "description": "Internal emails between USAG executive staff and legal counsel discussing athlete allegations and drafting public relations damage control before notifying federal authorities.",
+          "significance": "Evidenced corporate knowledge and institutional delay in reporting crimes against minors.",
+          "recoveredAt": "June 2017",
+          "recoveredBy": "Subpoena Enforcement, Congressional Investigation",
+          "classification": "Public Record"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-nassar",
+          "name": "Lawrence Gerard Nassar",
+          "alias": "Dr. Larry Nassar",
+          "role": "Primary Defendant / USAG National Medical Coordinator",
+          "status": "Convicted",
+          "background": "Licensed osteopathic physician specializing in sports medicine; national team doctor across four Olympic cycles (1996, 2000, 2004, 2008).",
+          "verifiedFindings": "Pleaded guilty to ten counts of first-degree criminal sexual conduct and three federal child exploitation charges.",
+          "allegations": "Initially claimed treatments were legitimate therapeutic maneuvers approved by foreign medical schools.",
+          "outcome": "Sentenced to 60 years in federal prison, followed by state prison terms of up to 175 years."
+        },
+        {
+          "id": "poi-penny",
+          "name": "Steve Penny",
+          "alias": "Former President & CEO, USA Gymnastics",
+          "role": "Corporate Executive / Institutional Target",
+          "status": "Allegations / Charged",
+          "background": "Headed USA Gymnastics from 2005 until resigning under pressure in March 2017.",
+          "verifiedFindings": "Arrested in 2018 in Texas on charges of evidence tampering related to removing documents from the Karolyi Ranch; charges were later dismissed by local prosecutors due to jurisdictional statutes.",
+          "allegations": "Alleged to have intentionally withheld information regarding Nassar from law enforcement to protect the corporate sponsor reputation of USAG.",
+          "outcome": "Banned permanently by the U.S. Center for SafeSport."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The turning point occurred when attorney and former athlete Rachael Denhollander went on the record with her full name and comprehensive documentation in the Indianapolis Star. Her refusal to accept confidentiality settlements broke the culture of fear, inspiring dozens of former Olympians and collegiate gymnasts to come forward within weeks.",
+        "turningPoints": [
+          {
+            "date": "September 12, 2016",
+            "title": "Denhollander Goes on the Record",
+            "detail": "Denhollander explicitly outlines Nassar’s exact grooming methodology, giving other victims the vocabulary and courage to recognize their own abuse."
+          },
+          {
+            "date": "December 2016",
+            "title": "Federal Forensic Image Recovery",
+            "detail": "FBI analysts recover deleted image databases on Nassar’s external hard drives, eliminating any possibility of pre-trial bail."
+          },
+          {
+            "date": "January 2018",
+            "title": "Open Sentencing Hearing Decision",
+            "detail": "Judge Rosemarie Aquilina permits every survivor who wished to speak to deliver an impact statement in open court, resulting in seven consecutive days of unprecedented public testimony."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "30th Judicial Circuit Court of Michigan & U.S. District Court, Western Michigan",
+        "presidingJudge": "Judge Rosemarie Aquilina (State) & Judge Janet T. Neff (Federal)",
+        "charges": [
+          "18 U.S.C. § 2252 - Receipt and Possession of Child Sexual Abuse Material (3 counts)",
+          "MCL 750.520b - First-Degree Criminal Sexual Conduct (10 counts in Ingham and Eaton Counties)"
+        ],
+        "prosecutionArgument": "The prosecution argued that Nassar methodically exploited his position as the most trusted medical authority in American gymnastics to victimize vulnerable children under the guise of healthcare, systematically silencing them through medical gaslighting.",
+        "defenseArgument": "Defense counsel initially contended Nassar utilized non-conventional myofascial techniques and lacked criminal intent, but abandoned the defense prior to guilty pleas in November 2017.",
+        "keyTestimonies": [
+          {
+            "witness": "Rachael Denhollander",
+            "role": "First Public Complainant & Attorney",
+            "keyPoints": "Testified about the pervasive silence that allowed Nassar to abuse athletes for 25 years and demanded complete institutional accountability from MSU and USAG."
+          },
+          {
+            "witness": "Aly Raisman",
+            "role": "Olympic Gold Medalist",
+            "keyPoints": "Directly addressed Nassar: \"You took advantage of our passion and our dreams. We are here, our voices are loud, and you are going to prison for the rest of your life.\""
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "July 11, 2017",
+            "title": "Federal Guilty Plea",
+            "description": "Nassar pleads guilty in federal court to three child pornography counts."
+          },
+          {
+            "date": "November 22, 2017",
+            "title": "State Guilty Plea",
+            "description": "Nassar pleads guilty in Ingham County to multiple counts of sexual conduct."
+          },
+          {
+            "date": "January 16–24, 2018",
+            "title": "The Seven-Day Sentencing Hearing",
+            "description": "156 survivors deliver victim impact statements in live broadcast court proceedings."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "January 24, 2018 (State) / December 7, 2017 (Federal)",
+        "pleaOrVerdict": "Guilty Plea to all federal and state charges",
+        "sentencing": "60 years federal imprisonment, followed by 40 to 175 years in Michigan state prison. Effective permanent incarceration.",
+        "appealsAndRulings": "Subsequent appeals alleging judicial bias during sentencing were denied by the Michigan Court of Appeals and the Michigan Supreme Court in 2020.",
+        "unresolvedLegalQuestions": "Ongoing federal civil litigation under the Federal Tort Claims Act (FTCA) regarding the FBI Indianapolis Field Office’s 426-day delay in investigating initial reports."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "Protecting Young Victims from Sexual Abuse and Safe Sport Authorization Act of 2017 (Public Law 115-126)",
+          "Mandatory reporting requirements for all youth athletic governing bodies",
+          "Extension of civil statutes of limitations for survivors of child sexual abuse"
+        ],
+        "institutionalImpact": "MSU President Lou Anna Simon resigned; entire USAG Board of Directors replaced; USAG filed for Chapter 11 bankruptcy restructuring.",
+        "victimAdvocacy": "Establishment of the Army of Survivors advocacy collective and the Sarah Grace-Aly Raisman legal defense funds.",
+        "currentStatus": "Nassar is incarcerated at USP Coleman II in Florida with an earliest release date exceeding the human lifespan."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How does medical authority create systemic barriers to reporting abuse?",
+          "context": "Athletes and parents repeatedly questioned Nassar’s techniques but deferred to his national Olympic credentials.",
+          "legalOrEthicalIssue": "The boundary between medical treatment and criminal battery in elite sports settings."
+        },
+        {
+          "question": "What are the ethical responsibilities of law enforcement when institutional delays occur?",
+          "context": "The DOJ Inspector General report detailed critical missteps by field agents who failed to document and log initial reports.",
+          "legalOrEthicalIssue": "Government liability under the Federal Tort Claims Act for failure to protect."
+        }
+      ],
+      "citations": [
+        {
+          "title": "DOJ Office of the Inspector General: Investigation and Review of the FBI’s Handling of Allegations Regarding Larry Nassar",
+          "source": "U.S. Department of Justice (Report 21-093)",
+          "date": "July 2021"
+        },
+        {
+          "title": "State of Michigan v. Lawrence Gerard Nassar, Case No. 16-1053-FC",
+          "source": "Ingham County 30th Judicial Circuit Court",
+          "date": "2018"
+        },
+        {
+          "title": "Out of Balance: A special investigation into USA Gymnastics",
+          "source": "The Indianapolis Star (Kwiatkowski, Alesia, Evans)",
+          "date": "August 2016"
+        }
+      ],
+      "createdAt": "2026-01-10T12:00:00Z",
+      "updatedAt": "2026-03-01T15:30:00Z"
+    },
+    {
+      "id": "case-epstein-2019",
+      "slug": "jeffrey-epstein-ghislaine-maxwell-investigation",
+      "caseNumber": "FD-302-NY-67310",
+      "title": "The Sex Trafficking Network: SDNY & Palm Beach Casework",
+      "subtitle": "The documentation of a systemic international trafficking syndicate and the trial of Ghislaine Maxwell",
+      "category": "Special Victims / Sexual Offences",
+      "location": "Palm Beach, FL, New York, NY, & London, UK",
+      "year": 2019,
+      "status": "Convicted",
+      "isPublished": true,
+      "isFeatured": true,
+      "contentWarnings": [
+        "Sex trafficking of minors",
+        "Child exploitation and grooming networks",
+        "Judicial and prosecutorial non-prosecution review"
+      ],
+      "summary": "A multi-decade investigation spanning the Palm Beach Police Department, the Southern District of New York (SDNY), and the FBI Public Corruption/Special Victims units, examining the international sex trafficking operation led by financier Jeffrey Epstein and associate Ghislaine Maxwell.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "Between 1994 and 2004, Epstein and Maxwell established a systematic pyramid grooming operation targeting minor girls at residences in Florida, New York, New Mexico, and the Virgin Islands. Despite a 2006 federal draft indictment, Epstein received a controversial Non-Prosecution Agreement (NPA) in 2008 before federal charges were revived in 2019.",
+        "victimInfo": "Dozens of identified survivors including Virginia Giuffre, Courtney Wild, Annie Farmer, and multiple Jane Doe witnesses.",
+        "jurisdiction": "U.S. District Court for the Southern District of New York (Judge Alison J. Nathan presiding over Maxwell trial).",
+        "initialAlertDate": "March 2005 (Palm Beach Police Chief Michael Reiter launches inquiry)"
+      },
+      "incident": {
+        "narrative": "Minors were recruited from high schools, community centers, and retail shops with financial incentives for \"massages\" that systematically escalated to sexual abuse. Recruited minors were instructed to recruit classmates for additional cash bonuses, creating an expanding network of vulnerable young victims.",
+        "timeline": [
+          {
+            "date": "March 14, 2005",
+            "title": "Parent Reports to Palm Beach Police",
+            "description": "A parent alerts Detective Joseph Recarey after discovering hundreds of dollars in cash paid to their 14-year-old stepdaughter.",
+            "source": "Palm Beach Police Incident Report #05-004944"
+          },
+          {
+            "date": "September 24, 2007",
+            "title": "Secret Non-Prosecution Agreement Signed",
+            "description": "U.S. Attorney Alexander Acosta signs federal NPA granting immunity to Epstein and unnamed co-conspirators without notifying victims.",
+            "source": "DOJ Office of Professional Responsibility Review"
+          },
+          {
+            "date": "November 2018",
+            "title": "Miami Herald Publishes \"Perversion of Justice\"",
+            "description": "Investigative reporter Julie K. Brown details how the secret NPA suppressed dozens of survivor accounts.",
+            "source": "Miami Herald"
+          },
+          {
+            "date": "July 6, 2019",
+            "title": "Federal Arrest at Teterboro Airport",
+            "description": "FBI agents take Epstein into custody following return from Paris on federal sex trafficking conspiracy indictment.",
+            "source": "U.S. Attorney’s Office SDNY"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "Following the unsealing of federal dockets in 2019 and the death of Epstein at Metropolitan Correctional Center on August 10, 2019, SDNY prosecutors and the FBI focused on co-conspirators. In July 2020, FBI agents executed a precision raid on a secluded estate in Bradford, New Hampshire, taking Ghislaine Maxwell into federal custody without incident.",
+        "procedureNotes": "Subpoenas served on corporate flight registries, hotel manifests, and telephone billing records. Forensic review of seized hard drives from the 9 East 71st Street Manhattan residence.",
+        "interviewRecordsSummary": "FBI FD-302 interviews of former household staff, pilots (including pilot David Rodgers), and international witnesses provided corroboration of travel itineraries matching victim abuse dates.",
+        "timeline": [
+          {
+            "date": "July 2, 2020",
+            "title": "Arrest of Ghislaine Maxwell",
+            "description": "FBI tactical team arrests Maxwell in Bradford, New Hampshire on sex trafficking of minors charges.",
+            "source": "Federal Docket 1:20-cr-00330-AJN"
+          },
+          {
+            "date": "November 29, 2021",
+            "title": "Jury Trial Commences in Manhattan",
+            "description": "Opening statements delivered in United States v. Ghislaine Maxwell before Judge Alison Nathan.",
+            "source": "Southern District of New York Transcript"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-epstein-01",
+          "exhibitNumber": "GOVT-EXHIBIT-52",
+          "title": "Lolita Express Flight Manifests (1995-2005)",
+          "type": "document",
+          "description": "Computerized flight logs maintained by pilot David Rodgers showing names, dates, and destinations for private Gulfstream flights transporting minors across international borders.",
+          "significance": "Proved the interstate and foreign commerce element required for federal sex trafficking convictions.",
+          "recoveredAt": "August 2019",
+          "recoveredBy": "SDNY Subpoena Enforcement",
+          "classification": "Grand Jury Exhibit"
+        },
+        {
+          "id": "ev-epstein-02",
+          "exhibitNumber": "GOVT-EXHIBIT-600",
+          "title": "The Palm Beach Address Book & Massage Calendars",
+          "type": "document",
+          "description": "Spiral-bound scheduling binders seized during the 2005 Palm Beach search warrant containing names, phone numbers, and coded payment annotations.",
+          "significance": "Corroborated witness testimony regarding recurring appointments and financial remuneration.",
+          "recoveredAt": "October 2005",
+          "recoveredBy": "Palm Beach Police Department Detective Unit",
+          "classification": "Public Record"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-maxwell",
+          "name": "Ghislaine Noelle Marion Maxwell",
+          "alias": "Ghislaine Maxwell",
+          "role": "Primary Defendant / Facilitator and Co-Conspirator",
+          "status": "Convicted",
+          "background": "British socialite and daughter of late media proprietor Robert Maxwell.",
+          "verifiedFindings": "Jury convicted Maxwell on five federal counts including sex trafficking of a minor, transporting a minor with intent to engage in criminal sexual activity, and conspiracy.",
+          "allegations": "Argued she was made a scapegoat for Epstein’s crimes following his death.",
+          "outcome": "Sentenced to 20 years in federal prison; currently serving at FCI Tallahassee."
+        },
+        {
+          "id": "poi-epstein",
+          "name": "Jeffrey Edward Epstein",
+          "alias": "Jeffrey Epstein",
+          "role": "Primary Subject / Mastermind",
+          "status": "Deceased",
+          "background": "Financier and former teacher; owner of extensive real estate holdings in NY, FL, NM, and USVI.",
+          "verifiedFindings": "Indicted on federal sex trafficking charges in July 2019. Previously registered as a Level 3 sex offender under 2008 Florida state plea.",
+          "allegations": "Accused by over 100 women of serial abuse, grooming, and human trafficking.",
+          "outcome": "Found dead in his cell on August 10, 2019; ruling of suicide by hanging by NYC Chief Medical Examiner."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The critical breakthrough was the unsealing of over 2,000 pages of previously redacted depositions in the civil defamation case Giuffre v. Maxwell by the Second Circuit Court of Appeals, coupled with investigative reporting that demonstrated the 2008 Non-Prosecution Agreement violated the federal Crime Victims’ Rights Act.",
+        "turningPoints": [
+          {
+            "date": "February 2019",
+            "title": "Federal Judge Declares 2008 NPA Violated Law",
+            "description": "Judge Kenneth Marra rules prosecutors violated the Crime Victims’ Rights Act by concealing the plea deal from victims.",
+            "detail": "Removed the perceived legal shield protecting co-conspirators from fresh federal scrutiny."
+          },
+          {
+            "date": "July 2019",
+            "title": "Unsealing of Flight Logs & Depositions",
+            "description": "Federal appeals court orders release of records containing contemporaneous witness statements.",
+            "detail": "Allowed SDNY prosecutors to interview witnesses previously bounded by protective confidentiality orders."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "U.S. District Court for the Southern District of New York (Foley Square)",
+        "presidingJudge": "Judge Alison J. Nathan",
+        "charges": [
+          "18 U.S.C. § 1591 - Sex Trafficking of a Minor",
+          "18 U.S.C. § 2423(a) - Transportation of a Minor with Intent to Engage in Criminal Sexual Activity",
+          "18 U.S.C. § 371 - Conspiracy to Commit Sex Trafficking"
+        ],
+        "prosecutionArgument": "Assistant U.S. Attorney Alison Moe demonstrated that Maxwell was Epstein’s primary partner in crime, creating a veneer of safety and respectability for young girls before participating directly in their sexual exploitation.",
+        "defenseArgument": "Defense attorneys argued that Maxwell was being scapegoated in place of Epstein because Epstein had died and the government needed a substitute target.",
+        "keyTestimonies": [
+          {
+            "witness": "Annie Farmer",
+            "role": "Victim Witness (Only testifying under her real name at trial)",
+            "keyPoints": "Testified about being abused by Epstein and Maxwell at age 16 during a visit to the Zorro Ranch in New Mexico."
+          },
+          {
+            "witness": "David Rodgers",
+            "role": "Long-time Pilot",
+            "keyPoints": "Verified flight records detailing hundreds of trips carrying underage passengers alongside Maxwell and Epstein."
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "November 29, 2021",
+            "title": "Trial Commences",
+            "description": "Jury seated in Courtroom 110 at Thurgood Marshall United States Courthouse."
+          },
+          {
+            "date": "December 29, 2021",
+            "title": "Guilty Verdict Delivered",
+            "description": "Jury finds Maxwell guilty on 5 of 6 counts after five days of deliberations."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "December 29, 2021 (Verdict) / June 28, 2022 (Sentencing)",
+        "pleaOrVerdict": "Guilty on five federal counts",
+        "sentencing": "20 years in federal prison and a $750,000 fine.",
+        "appealsAndRulings": "Second Circuit Court of Appeals upheld Maxwell’s conviction in September 2024, rejecting juror misconduct claims.",
+        "unresolvedLegalQuestions": "Questions remain regarding complete disclosure of individuals named in grand jury materials and foreign political associates."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "Scrutiny and nationwide revisions regarding the execution of federal Non-Prosecution Agreements (NPAs)",
+          "Strengthening of Crime Victims’ Rights Act (CVRA) enforcement mechanisms",
+          "Establishment of the Epstein Victims’ Compensation Program distributing over $120 million"
+        ],
+        "institutionalImpact": "Resignation of high-profile financial and philanthropic figures; civil settlements by major investment banks regarding AML red flags.",
+        "victimAdvocacy": "Passage of the Adult Survivors Act in New York, opening a one-year lookback window for civil assault claims.",
+        "currentStatus": "Maxwell remains incarcerated at FCI Tallahassee, scheduled for release in July 2037."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "What institutional checks failed when prosecutors signed a secret Non-Prosecution Agreement in 2008?",
+          "context": "Federal prosecutors entered an agreement concealing immunity provisions from identified minor victims.",
+          "legalOrEthicalIssue": "The tension between prosecutorial discretion and mandatory notification under the CVRA."
+        }
+      ],
+      "citations": [
+        {
+          "title": "United States v. Ghislaine Maxwell, 1:20-cr-00330 (S.D.N.Y.)",
+          "source": "Federal Court Record Transcript",
+          "date": "2021-2022"
+        },
+        {
+          "title": "Department of Justice Office of Professional Responsibility: Epstein Investigation Review",
+          "source": "U.S. Department of Justice",
+          "date": "November 2020"
+        }
+      ],
+      "createdAt": "2026-01-15T10:00:00Z",
+      "updatedAt": "2026-03-05T14:10:00Z"
+    },
+    {
+      "id": "case-wetterling-1989",
+      "slug": "disappearance-of-jacob-wetterling",
+      "caseNumber": "FD-302-MN-44912",
+      "title": "The Jacob Wetterling Casework & The Federal Registry Act",
+      "subtitle": "A 27-year child abduction investigation that fundamentally altered national missing children protocols",
+      "category": "Kidnapping",
+      "location": "St. Joseph, Stearns County, Minnesota",
+      "year": 1989,
+      "status": "Solved",
+      "isPublished": true,
+      "isFeatured": false,
+      "contentWarnings": [
+        "Child abduction and homicide",
+        "Long-term cold case investigation",
+        "Sensitive treatment of survivor accounts"
+      ],
+      "summary": "The October 1989 abduction of 11-year-old Jacob Wetterling on a rural road in Minnesota. The case mobilized parents Patty and Jerry Wetterling into national advocates, resulting in the 1994 federal Jacob Wetterling Act establishing state sex offender registries. Solved in 2016 through advanced touch-DNA re-examination of a connected cold assault.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "On Sunday evening, October 22, 1989, 11-year-old Jacob Wetterling, his 10-year-old brother Trevor, and an 11-year-old friend Aaron were biking home from a local video rental shop in rural St. Joseph, Minnesota. A masked armed assailant intercepted them on a dark driveway, separated Jacob, and ordered the other two boys to flee into the woods.",
+        "victimInfo": "Jacob Wetterling (aged 11); surviving witnesses Trevor Wetterling and Aaron Larson.",
+        "jurisdiction": "Stearns County Sheriff’s Office, Minnesota Bureau of Criminal Apprehension (BCA), and the Federal Bureau of Investigation.",
+        "initialAlertDate": "October 22, 1989 (911 call placed at 9:32 PM)"
+      },
+      "incident": {
+        "narrative": "The abduction took less than two minutes. The masked man brandished a revolver, demanded each boy’s age, told Trevor and Aaron to run or be shot, and fled with Jacob into the darkness. Within hours, hundreds of local volunteers, National Guard troops, and FBI agents launched the largest manhunt in Minnesota history.",
+        "timeline": [
+          {
+            "date": "October 22, 1989",
+            "title": "The Abduction on Kiwi Road",
+            "description": "Assailant in mask stops three boys returning on bicycles; Jacob Wetterling is taken.",
+            "source": "Stearns County Sheriff Incident Log"
+          },
+          {
+            "date": "January 1989",
+            "title": "Unlinked Cold Assault in Cold Spring",
+            "description": "Nine months prior, a 12-year-old boy in nearby Cold Spring was abducted, assaulted, and released by a man matching the same physical description and voice.",
+            "source": "Minnesota BCA Case Files"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "For nearly three decades, the investigation followed thousands of dead-end leads. In 2010, the Stearns County Sheriff and BCA reopened every file from scratch. Investigators re-examined the January 1989 Cold Spring assault, locating the victim’s preserved jacket. In 2015, modern touch-DNA technology yielded a profile that matched Danny Heinrich, an early suspect who had been questioned in 1989 but never charged.",
+        "procedureNotes": "Microscopic fiber analysis and touch-DNA STR typing conducted by the Minnesota BCA Forensic Science Laboratory.",
+        "interviewRecordsSummary": "FBI FD-302 interviews dating back to 1989 were systematically cross-referenced against vehicle tire tracks and sneaker impression casts taken at the abduction scene.",
+        "timeline": [
+          {
+            "date": "July 2015",
+            "title": "DNA Match to Cold Spring Assault",
+            "description": "Forensic scientists match Heinrich’s DNA to the sweater worn by the 1989 Cold Spring victim.",
+            "source": "Minnesota BCA Forensic Laboratory Report"
+          },
+          {
+            "date": "October 28, 2015",
+            "title": "Federal Search Warrant Executed",
+            "description": "Federal search on Heinrich’s Annandale home uncovers extensive CSAM and binder records.",
+            "source": "U.S. District Court of Minnesota Search Docket"
+          },
+          {
+            "date": "September 1, 2016",
+            "title": "Perpetrator Leads Detectives to Remains",
+            "description": "As part of a federal plea agreement, Heinrich leads authorities to a burial site in Paynesville, MN.",
+            "source": "Joint Federal and State Press Conference"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-jw-01",
+          "exhibitNumber": "BCA-ITEM-77",
+          "title": "Cold Spring Assault Victim Jacket with Saliva/Touch-DNA",
+          "type": "forensic",
+          "description": "Biological profile preserved on cotton fabric for 26 years; matched Danny Heinrich at 1-in-several-billion probability.",
+          "significance": "The definitive physical link that broke the case open and forced Heinrich’s confession.",
+          "recoveredAt": "January 1989 / Reanalyzed 2015",
+          "recoveredBy": "Minnesota BCA Cold Case Unit",
+          "classification": "Confidential"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-heinrich",
+          "name": "Danny James Heinrich",
+          "alias": "Danny Heinrich",
+          "role": "Perpetrator",
+          "status": "Convicted",
+          "background": "Local resident who lived within 15 miles of both attacks; questioned by FBI in 1989 and 1990.",
+          "verifiedFindings": "Confessed in open federal court to the abduction and killing of Jacob Wetterling on the night of October 22, 1989.",
+          "allegations": "Avoided arrest for 27 years due to lack of physical DNA match in 1989.",
+          "outcome": "Sentenced to 20 years in federal prison on child pornography charges pursuant to the cooperation plea agreement."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The breakthrough came from re-examining unsolved offenses in neighboring towns rather than treating the Wetterling case in isolation, proving that serial offenders leave forensic signatures across earlier offenses.",
+        "turningPoints": [
+          {
+            "date": "2014",
+            "title": "Stearns County Investigative Review",
+            "detail": "Task force investigator Pam Jensen re-opens the Cold Spring assault file and orders advanced DNA testing."
+          },
+          {
+            "date": "September 2016",
+            "title": "The Full Confession",
+            "detail": "Heinrich provides a detailed factual allocution in federal court describing the events of October 22, 1989."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "U.S. District Court for the District of Minnesota (Minneapolis)",
+        "presidingJudge": "Judge John R. Tunheim",
+        "charges": [
+          "18 U.S.C. § 2252 - Federal Child Exploitation Charges (Plea in lieu of state murder charges following recovery)"
+        ],
+        "prosecutionArgument": "U.S. Attorney Andrew Luger secured a plea that guaranteed the recovery of Jacob’s remains, providing long-awaited certainty to the Wetterling family and the state of Minnesota.",
+        "defenseArgument": "Heinrich agreed to make a full public confession and identify the location of Jacob’s remains in exchange for federal sentencing.",
+        "keyTestimonies": [
+          {
+            "witness": "Patty Wetterling",
+            "role": "Mother & Child Safety Advocate",
+            "keyPoints": "Spoke about Jacob’s legacy of hope, love, and building a world worthy of children: \"Jacob has taught all of us how to be kinder, more compassionate, and to never give up on missing children.\""
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "September 6, 2016",
+            "title": "Federal Plea Hearing",
+            "description": "Heinrich gives sworn confession under oath before Chief Judge Tunheim."
+          },
+          {
+            "date": "November 21, 2016",
+            "title": "Formal Sentencing",
+            "description": "Heinrich sentenced to maximum 20-year federal term."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "November 21, 2016",
+        "pleaOrVerdict": "Guilty Plea",
+        "sentencing": "20 years in federal prison, followed by civil commitment proceedings upon release.",
+        "appealsAndRulings": "No appeals filed.",
+        "unresolvedLegalQuestions": "Heinrich remains subject to civil commitment as a sexually dangerous person at the conclusion of his sentence."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "The Jacob Wetterling Crimes Against Children and Sexually Violent Offender Registration Act of 1994 (enacted by President Clinton as Title XVII of the Violent Crime Control and Law Enforcement Act)",
+          "Mandated federal baseline requirements for all 50 states to maintain sex offender registries",
+          "Direct precursor to Megan’s Law (1996) and the Adam Walsh Child Protection and Safety Act (2006)"
+        ],
+        "institutionalImpact": "Established the Jacob Wetterling Resource Center, providing national education, abduction response protocols, and victim advocacy.",
+        "victimAdvocacy": "Transformed national missing child response standards and police training across the United States.",
+        "currentStatus": "Case solved and officially closed; Heinrich remains incarcerated."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How did the Wetterling case redefine national child protection legislation?",
+          "context": "Prior to 1994, there was no centralized federal tracking system for convicted sex offenders moving across state lines.",
+          "legalOrEthicalIssue": "The constitutional balance of public safety registries and post-sentence civil monitoring."
+        }
+      ],
+      "citations": [
+        {
+          "title": "United States v. Danny James Heinrich, Case No. 15-cr-326 (D. Minn.)",
+          "source": "Federal District Court Transcript",
+          "date": "2016"
+        },
+        {
+          "title": "Jacob Wetterling Act, 42 U.S.C. § 14071",
+          "source": "U.S. Government Publishing Office",
+          "date": "1994"
+        }
+      ],
+      "createdAt": "2026-01-22T08:30:00Z",
+      "updatedAt": "2026-03-01T10:00:00Z"
+    },
+    {
+      "id": "case-lindbergh-1932",
+      "slug": "the-lindbergh-kidnapping-and-federal-law",
+      "caseNumber": "FD-302-NJ-00104",
+      "title": "The Lindbergh Casework & The Federal Kidnapping Statute",
+      "subtitle": "The historic case that created federal kidnapping jurisdiction and pioneered forensic wood analysis",
+      "category": "Kidnapping",
+      "location": "East Amwell, NJ & Bronx, NY",
+      "year": 1932,
+      "status": "Convicted",
+      "isPublished": true,
+      "isFeatured": false,
+      "contentWarnings": [
+        "Infant abduction and homicide",
+        "Historical criminal prosecution",
+        "Pioneering forensic evidence"
+      ],
+      "summary": "The March 1, 1932 abduction of 20-month-old Charles Lindbergh Jr. from his nursery in New Jersey. The ensuing investigation led to the passage of the 1932 Federal Kidnapping Act (\"Lindbergh Law\"), Arthur Koehler’s legendary forensic wood anatomy matching the homemade ladder to Bruno Richard Hauptmann’s attic, and landmark FBI forensic lab development.",
+      "bannerImageUrl": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
+      "overview": {
+        "background": "Charles Lindbergh was an international hero following his 1927 solo transatlantic flight. On March 1, 1932, his 20-month-old son was snatched from his second-story crib. A crude three-section wooden ladder was discovered abandoned near the house, along with an envelope on the nursery windowsill demanding a $50,000 ransom.",
+        "victimInfo": "Charles Augustus Lindbergh Jr. (20 months old).",
+        "jurisdiction": "New Jersey State Police (Colonel H. Norman Schwarzkopf), New York City Police Department, and the FBI (directed by J. Edgar Hoover).",
+        "initialAlertDate": "March 1, 1932 at 10:25 PM"
+      },
+      "incident": {
+        "narrative": "The kidnapper gained access to the nursery via a homemade ladder placed against the building. The nursery window had warped shutters that could not be fully bolted. A ransom note bearing a distinctive insignia—two intersecting blue circles with an oval red center pierced by three holes—was left behind.",
+        "timeline": [
+          {
+            "date": "March 1, 1932",
+            "title": "The Abduction from Highfields",
+            "description": "Nanny Betty Gow discovers child missing from crib; ransom note found on windowsill.",
+            "source": "New Jersey State Police Archives"
+          },
+          {
+            "date": "April 2, 1932",
+            "title": "The Ransom Exchange at St. Raymond’s Cemetery",
+            "description": "Intermediary Dr. John F. Condon delivers $50,000 in specially recorded Gold Certificates to an unidentified man (\"Cemetery John\").",
+            "source": "FBI Casework Summary"
+          },
+          {
+            "date": "May 12, 1932",
+            "title": "Tragic Discovery of the Body",
+            "description": "Truck driver William Allen discovers child’s body in woods 4.5 miles from Highfields estate; medical exam determines child died of skull fracture on the night of abduction.",
+            "source": "Hunterdon County Coroner Report"
+          }
+        ]
+      },
+      "investigation": {
+        "narrative": "With kidnapping not yet a federal crime at the time of the event, Congress swiftly passed the Federal Kidnapping Act on June 17, 1932, empowering the FBI to intervene when state lines were crossed. The breakthrough arrived two years later when gas station attendant Lyle Sloan wrote down the license plate of a customer who paid for gas with a $10 Gold Certificate matching the ransom serial numbers.",
+        "procedureNotes": "Tracking of 5,150 serial numbers of Gold Certificates; pioneering wood plane mark comparison under macro-photography by USDA Forest Service expert Arthur Koehler.",
+        "interviewRecordsSummary": "Over 1,000 documented investigative interviews; handwriting analysis comparing the 13 ransom letters with Hauptmann’s personal notebooks and bank deposit slips.",
+        "timeline": [
+          {
+            "date": "September 18, 1934",
+            "title": "The $10 Gold Certificate Alert",
+            "description": "Gas station attendant notes license plate 4U-13-41 NY on a $10 gold bill passed by Bruno Richard Hauptmann.",
+            "source": "NYPD 42nd Precinct Log"
+          },
+          {
+            "date": "September 19, 1934",
+            "title": "Arrest of Bruno Richard Hauptmann",
+            "description": "Police and federal agents arrest Hauptmann; $14,600 of the ransom gold certificates are found hidden in his garage walls.",
+            "source": "FBI Historical Case Document 302-NJ-00104"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "ev-lindbergh-01",
+          "exhibitNumber": "STATE-EXHIBIT-S-226",
+          "title": "Forensic Wood Analysis of Ladder Rail 16",
+          "type": "physical",
+          "description": "Forensic wood technologist Arthur Koehler demonstrated that Rail 16 of the kidnap ladder came from a floorboard cut from Hauptmann’s attic. Nail holes, wood grain, growth rings, and hand-plane blade chatter marks matched perfectly.",
+          "significance": "Considered the birth of scientific trace wood forensics in American criminal court history.",
+          "recoveredAt": "March 1932 & September 1934",
+          "recoveredBy": "Arthur Koehler (U.S. Forest Products Laboratory)",
+          "classification": "Public Record"
+        },
+        {
+          "id": "ev-lindbergh-02",
+          "exhibitNumber": "STATE-EXHIBIT-S-18",
+          "title": "Seized Gold Certificates ($14,600 Recovered in Garage)",
+          "type": "physical",
+          "description": "Gold certificates wrapped in newspaper hidden inside two-by-four timber joists in Hauptmann’s detached garage.",
+          "significance": "Direct physical possession of the ransom funds delivered at St. Raymond’s Cemetery.",
+          "recoveredAt": "September 1934",
+          "recoveredBy": "NYPD and FBI Joint Team",
+          "classification": "Public Record"
+        }
+      ],
+      "personsOfInterest": [
+        {
+          "id": "poi-hauptmann",
+          "name": "Bruno Richard Hauptmann",
+          "alias": "Richard Hauptmann",
+          "role": "Defendant",
+          "status": "Convicted",
+          "background": "German immigrant and carpenter with a criminal record in Germany; resided in the Bronx, New York.",
+          "verifiedFindings": "Found in possession of $14,600 in ransom currency; hand plane matched ladder tool marks; handwriting matched ransom notes.",
+          "allegations": "Claimed currency had been left in a shoe box by deceased friend Isidor Fisch without his knowledge (\"The Fisch Story\").",
+          "outcome": "Convicted of first-degree murder in commission of a felony; executed in New Jersey electric chair on April 3, 1936."
+        }
+      ],
+      "breakthrough": {
+        "narrative": "The synthesis of financial surveillance (tracking the discontinued gold certificate serials) and Arthur Koehler’s microscopic botanical wood analysis provided incontrovertible physical proof tying Hauptmann to the construction of the ladder.",
+        "turningPoints": [
+          {
+            "date": "September 1934",
+            "title": "The License Plate Slip",
+            "detail": "Alert gas station clerk Lyle Sloan notices customer using rare gold certificate and jots license plate on the margin of the bill."
+          },
+          {
+            "date": "October 1934",
+            "title": "The Attic Floorboard Match",
+            "detail": "Detectives discover a floorboard in Hauptmann’s attic had been sawed off with grain lines and nail holes aligning with the kidnap ladder rail."
+          }
+        ]
+      },
+      "courtroom": {
+        "court": "Hunterdon County Court of Oyer and Terminer (Flemington, NJ)",
+        "presidingJudge": "Judge Thomas W. Trenchard",
+        "charges": [
+          "First-Degree Murder during the commission of a Burglary (Felony Murder under New Jersey statutes)"
+        ],
+        "prosecutionArgument": "New Jersey Attorney General David T. Wilentz argued that Hauptmann planned and executed the kidnapping alone, and that the child died when the homemade ladder broke during the descent.",
+        "defenseArgument": "Edward J. Reilly argued the evidence was circumstantial and that Hauptmann was an innocent custodian of money left by Isidor Fisch.",
+        "keyTestimonies": [
+          {
+            "witness": "Arthur Koehler",
+            "role": "Forensic Wood Expert",
+            "keyPoints": "Delivered masterclass testimony demonstrating with photographic plates that the ladder rail was cut from Hauptmann’s attic board with Hauptmann’s own dull plane."
+          },
+          {
+            "witness": "Dr. John F. Condon (\"Jafsie\")",
+            "role": "Ransom Intermediary",
+            "keyPoints": "Identified Hauptmann as \"Cemetery John,\" the man who accepted the ransom package in the Bronx cemetery."
+          }
+        ],
+        "trialTimeline": [
+          {
+            "date": "January 2, 1935",
+            "title": "\"Trial of the Century\" Begins",
+            "description": "Opening statements delivered before international press corps in Flemington, NJ."
+          },
+          {
+            "date": "February 13, 1935",
+            "title": "Guilty Verdict",
+            "description": "Jury returns verdict of murder in the first degree without recommendation of mercy."
+          }
+        ]
+      },
+      "verdict": {
+        "verdictDate": "February 13, 1935",
+        "pleaOrVerdict": "Guilty of First-Degree Murder",
+        "sentencing": "Death by electrocution; executed April 3, 1936 at New Jersey State Prison.",
+        "appealsAndRulings": "Appeals to the New Jersey Court of Errors and Appeals and the U.S. Supreme Court were denied.",
+        "unresolvedLegalQuestions": "Historic debate regarding whether Hauptmann had an accomplice who provided inside floor layout information."
+      },
+      "aftermath": {
+        "legalReforms": [
+          "Federal Kidnapping Act of 1932 (\"The Lindbergh Law\", 18 U.S.C. § 1201) establishing federal FBI jurisdiction for abductions across state boundaries",
+          "Accelerated expansion of the FBI Laboratory Division (founded November 1932) into the premier scientific crime detection facility",
+          "Judicial regulations regarding camera and press access inside courtrooms (ABA Canon 35)"
+        ],
+        "institutionalImpact": "Established J. Edgar Hoover’s FBI as a modern scientific law enforcement agency.",
+        "victimAdvocacy": "Anne Morrow Lindbergh’s memoirs and literary works championed child welfare and privacy protections.",
+        "currentStatus": "Historical landmark casework; evidence permanently archived at the New Jersey State Police Museum."
+      },
+      "reflectionPrompts": [
+        {
+          "question": "How did the Lindbergh case transform forensic science from novelty into decisive courtroom proof?",
+          "context": "Arthur Koehler spent months tracing mill marks on lumber back through regional supply chains to locate the Bronx lumberyard where Hauptmann shopped.",
+          "legalOrEthicalIssue": "Scientific standards of admissibility for novel forensic expert testimony."
+        }
+      ],
+      "citations": [
+        {
+          "title": "State of New Jersey v. Bruno Richard Hauptmann, 115 N.J.L. 412 (E. & A. 1935)",
+          "source": "New Jersey Court of Errors and Appeals",
+          "date": "1935"
+        },
+        {
+          "title": "Federal Kidnapping Act, Pub. L. 72-189, 47 Stat. 326",
+          "source": "United States Statutes at Large",
+          "date": "1932"
+        }
+      ],
+      "createdAt": "2026-01-25T11:00:00Z",
+      "updatedAt": "2026-02-28T16:20:00Z"
+    }
+  ],
+  "media": [],
+  "settings": {
+    "archiveTitle": "THE 302 DOCKET",
+    "tagline": "Every case leaves a paper trail.",
+    "disclaimer": "The 302 Docket is an independent cyber-investigative archive inspired by 1990s law enforcement terminals, Form FD-302 casework, and public judicial records. Not affiliated with the FBI, the Department of Justice, or any law enforcement agency.",
+    "introHeading": "SYSTEM DOCKET TERMINAL — FORM FD-302 INVESTIGATIVE SERIES",
+    "introBody": "Welcome to THE 302 DOCKET terminal. Every interview leaves a record. Every case leaves a paper trail. Access classified dossiers, inspect logged physical exhibits, analyze suspect network diagrams, and trace legal precedents across landmark criminal investigations."
+  },
+  "stats": {
+    "totalCases": 8,
+    "activeDossiers": 0,
+    "exhibitsLogged": 17,
+    "decadesCovered": 9,
+    "jurisdictionsCount": 8,
+    "categoriesBreakdown": {
+      "Crimes Against Children": 2,
+      "Homicide": 2,
+      "Missing Persons": 1,
+      "Special Victims / Sexual Offences": 1,
+      "Kidnapping": 2
+    }
+  }
+}

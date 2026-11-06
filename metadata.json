@@ -1,0 +1,8 @@
+{
+  "name": "The 302 Docket",
+  "description": "An independent investigative archive inspired by FBI casework and FD-302 documentation. Every case leaves a paper trail.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
