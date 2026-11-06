@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { CaseFile, KeyTestimony } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { CaseCourtroomGame } from './CaseCourtroomGame.tsx';
 
 interface CaseCourtroomViewProps {
   caseData: CaseFile;
@@ -27,6 +28,7 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
     caseData.status === 'Cold Case / Unresolved' ||
     caseData.status === 'Active Investigation';
 
+  const [viewMode, setViewMode] = useState<'game' | 'docket'>('game');
   const [activeTab, setActiveTab] = useState<'arguments' | 'testimonies' | 'exhibits' | 'adjudication'>('arguments');
   const [isVerdictUnsealed, setIsVerdictUnsealed] = useState<boolean>(false);
   const [isUnsealing, setIsUnsealing] = useState<boolean>(false);
@@ -54,10 +56,62 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
 
   return (
     <div className="space-y-6">
-      {/* Courtroom Docket Header */}
-      <div className="retro-window p-4 flex flex-wrap items-center justify-between gap-4 bg-[#080b0e]">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-red-950/60 border border-red-800 text-red-400">
+      {/* Courtroom Mode Navigation Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0a0d12] border-2 border-red-900/60 rounded">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setViewMode('game');
+            }}
+            className={`px-4 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
+              viewMode === 'game'
+                ? 'bg-red-950 text-red-300 border-2 border-red-600 font-bold shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                : 'bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+            }`}
+          >
+            <Gavel className="w-4 h-4 text-red-400" />
+            <span>PLAY COURTROOM GAME (PROSECUTE THE CASE)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setViewMode('docket');
+            }}
+            className={`px-4 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
+              viewMode === 'docket'
+                ? 'bg-zinc-800 text-amber-300 border-2 border-amber-500 font-bold'
+                : 'bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-amber-400" />
+            <span>EXAMINE AUDITED DOCKET RECORDS</span>
+          </button>
+        </div>
+
+        <span className="text-[10px] font-pixel text-zinc-400 uppercase">
+          {viewMode === 'game'
+            ? 'INTERACTIVE SIMULATION MODE ACTIVE'
+            : 'HISTORICAL COURT RECORD ARCHIVE'}
+        </span>
+      </div>
+
+      {viewMode === 'game' ? (
+        <CaseCourtroomGame
+          caseData={caseData}
+          onViewExhibits={() => {
+            soundEngine.playKeyClick();
+            setViewMode('docket');
+            setActiveTab('exhibits');
+          }}
+        />
+      ) : (
+        <>
+          {/* Courtroom Docket Header */}
+          <div className="retro-window p-4 flex flex-wrap items-center justify-between gap-4 bg-[#080b0e]">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-red-950/60 border border-red-800 text-red-400">
             <Scale className="w-5 h-5 animate-pulse" />
           </div>
           <div>
@@ -429,6 +483,8 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
           )}
         </div>
       )}
-    </div>
+    </>
+  )}
+</div>
   );
 };

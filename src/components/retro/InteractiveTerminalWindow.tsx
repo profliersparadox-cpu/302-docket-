@@ -31,6 +31,9 @@ const KNOWN_COMMANDS = [
   'docs',
   'map',
   'exercises',
+  'trial',
+  'trialsim',
+  'courtroom',
   'stamps',
   'about',
   'clear',
@@ -259,6 +262,9 @@ export const InteractiveTerminalWindow: React.FC<InteractiveTerminalWindowProps>
     } else if (lower === 'exercises' || lower === 'training') {
       onOpenApp('exercises');
       outputNode = <div className="text-emerald-400">LAUNCHING: INVESTIGATIVE_LAB.EXE training suite...</div>;
+    } else if (lower === 'trial' || lower === 'trialsim' || lower === 'courtroom' || lower === 'prosecute') {
+      onOpenApp('trial_sim');
+      outputNode = <div className="text-emerald-400">LAUNCHING: TRIAL_SIM.EXE - Courtroom Prosecution Simulator on desktop...</div>;
     } else if (lower === 'stamps' || lower === 'badges' || lower === 'collectibles') {
       onOpenApp('collectibles');
       outputNode = <div className="text-emerald-400">LAUNCHING: ARCHIVE_STAMPS.EXE badge viewer...</div>;

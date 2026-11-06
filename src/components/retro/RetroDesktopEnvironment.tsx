@@ -30,6 +30,8 @@ import {
   MapPin,
   CheckCircle2,
   Filter,
+  Scale,
+  Gavel,
 } from 'lucide-react';
 import { CaseFile } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
@@ -44,6 +46,7 @@ import { InvestigativeExercises } from './InvestigativeExercises.tsx';
 import { CollectiblesAndSecrets } from './CollectiblesAndSecrets.tsx';
 import { CaseWallView } from './CaseWallView.tsx';
 import { CaseDetail } from '../CaseDetail.tsx';
+import { CaseCourtroomGame } from '../case/CaseCourtroomGame.tsx';
 
 export interface WindowState {
   id: string;
@@ -281,7 +284,22 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
       width: 1000,
       height: 640,
     },
+    {
+      id: 'trial_sim',
+      title: 'TRIAL_SIM.EXE - Federal Courtroom Prosecution Simulator',
+      icon: <Scale className="w-4 h-4 text-red-400" />,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 20,
+      x: 50,
+      y: 20,
+      width: 960,
+      height: 620,
+    },
   ]);
+
+  const [trialSimCaseSlug, setTrialSimCaseSlug] = useState<string | null>(null);
 
   // Window drag state
   const [draggingWindowId, setDraggingWindowId] = useState<string | null>(null);
@@ -428,6 +446,18 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
       icon: <Folder className="w-8 h-8 text-amber-400" />,
       sublabel: 'Case Catalog',
       onClick: () => openWindow('case_wall'),
+    },
+    {
+      id: 'trial_sim',
+      label: 'TRIAL_SIM.EXE',
+      icon: <Scale className="w-8 h-8 text-red-500 animate-pulse" />,
+      sublabel: 'Prosecution Game',
+      onClick: () => {
+        if (!trialSimCaseSlug && cases.length > 0) {
+          setTrialSimCaseSlug(cases[0].slug);
+        }
+        openWindow('trial_sim');
+      },
     },
     {
       id: 'terminal',
@@ -685,6 +715,58 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                     />
                   </div>
                 )}
+                {win.id === 'trial_sim' && (
+                  <div className="h-full overflow-y-auto bg-[#06080b] p-3 sm:p-5 space-y-4">
+                    {/* Case Switcher Banner inside Trial Simulator */}
+                    <div className="p-3 bg-[#0a0d13] border border-red-900/60 rounded flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-pixel text-[10px] text-red-400 uppercase font-bold">
+                          PROSECUTE INVESTIGATION:
+                        </span>
+                        <select
+                          value={trialSimCaseSlug || cases[0]?.slug || ''}
+                          onChange={(e) => {
+                            soundEngine.playKeyClick();
+                            setTrialSimCaseSlug(e.target.value);
+                          }}
+                          className="bg-black border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded text-xs font-mono focus:border-red-500 focus:outline-none"
+                        >
+                          {cases.map((c) => (
+                            <option key={c.slug} value={c.slug}>
+                              {c.caseNumber} - {c.title} ({c.status})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="text-[10px] font-pixel text-zinc-400">
+                        SELECT ANY CASE FROM ARCHIVE TO PROSECUTE
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const activeSimCase =
+                        cases.find((c) => c.slug === trialSimCaseSlug) || cases[0];
+                      if (!activeSimCase) {
+                        return (
+                          <div className="p-8 text-center text-zinc-500 font-mono text-xs">
+                            NO ACTIVE INVESTIGATIONS FOUND.
+                          </div>
+                        );
+                      }
+                      return (
+                        <CaseCourtroomGame
+                          caseData={activeSimCase}
+                          onViewExhibits={() => {
+                            setActiveCaseSlug(activeSimCase.slug);
+                            openWindow('case_viewer');
+                          }}
+                          onCloseGame={() => closeWindow('trial_sim')}
+                        />
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -789,6 +871,14 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                 >
                   <Folder className="w-4 h-4 text-amber-400" />
                   <span>Case Wall Repository</span>
+                </button>
+
+                <button
+                  onClick={() => openWindow('trial_sim')}
+                  className="w-full px-2.5 py-1.5 text-left hover:bg-red-950/60 rounded flex items-center space-x-2 text-red-400 font-bold border border-red-900/40"
+                >
+                  <Scale className="w-4 h-4 text-red-500 animate-pulse" />
+                  <span>Courtroom Trial Simulator</span>
                 </button>
 
                 <button
