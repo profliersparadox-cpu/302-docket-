@@ -47,6 +47,7 @@ import { CollectiblesAndSecrets } from './CollectiblesAndSecrets.tsx';
 import { CaseWallView } from './CaseWallView.tsx';
 import { CaseDetail } from '../CaseDetail.tsx';
 import { CaseCourtroomGame } from '../case/CaseCourtroomGame.tsx';
+import { CourtroomSim } from '../CourtroomSim.tsx';
 
 export interface WindowState {
   id: string;
@@ -755,13 +756,11 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                         );
                       }
                       return (
-                        <CaseCourtroomGame
+                        <CourtroomSim
                           caseData={activeSimCase}
-                          onViewExhibits={() => {
-                            setActiveCaseSlug(activeSimCase.slug);
-                            openWindow('case_viewer');
-                          }}
-                          onCloseGame={() => closeWindow('trial_sim')}
+                          cases={cases}
+                          onSelectCase={(slug) => setTrialSimCaseSlug(slug)}
+                          onClose={() => closeWindow('trial_sim')}
                         />
                       );
                     })()}

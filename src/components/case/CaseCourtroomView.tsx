@@ -18,6 +18,7 @@ import {
 import { CaseFile, KeyTestimony } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { CaseCourtroomGame } from './CaseCourtroomGame.tsx';
+import { CourtroomSim } from '../CourtroomSim.tsx';
 
 interface CaseCourtroomViewProps {
   caseData: CaseFile;
@@ -28,7 +29,7 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
     caseData.status === 'Cold Case / Unresolved' ||
     caseData.status === 'Active Investigation';
 
-  const [viewMode, setViewMode] = useState<'game' | 'docket'>('game');
+  const [viewMode, setViewMode] = useState<'sim' | 'game' | 'docket'>('sim');
   const [activeTab, setActiveTab] = useState<'arguments' | 'testimonies' | 'exhibits' | 'adjudication'>('arguments');
   const [isVerdictUnsealed, setIsVerdictUnsealed] = useState<boolean>(false);
   const [isUnsealing, setIsUnsealing] = useState<boolean>(false);
@@ -58,20 +59,35 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
     <div className="space-y-6">
       {/* Courtroom Mode Navigation Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0a0d12] border-2 border-red-900/60 rounded">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setViewMode('sim');
+            }}
+            className={`px-3.5 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
+              viewMode === 'sim'
+                ? 'bg-red-950 text-red-300 border-2 border-red-600 font-bold shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                : 'bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+            }`}
+          >
+            <Scale className="w-4 h-4 text-red-400" />
+            <span>COURTROOM SIM (DEFENCE BOT & EVIDENCE SCREEN)</span>
+          </button>
+
           <button
             onClick={() => {
               soundEngine.playKeyClick();
               setViewMode('game');
             }}
-            className={`px-4 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
+            className={`px-3.5 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
               viewMode === 'game'
-                ? 'bg-red-950 text-red-300 border-2 border-red-600 font-bold shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                ? 'bg-amber-950 text-amber-300 border-2 border-amber-600 font-bold shadow-[0_0_15px_rgba(251,191,36,0.3)]'
                 : 'bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
             }`}
           >
-            <Gavel className="w-4 h-4 text-red-400" />
-            <span>PLAY COURTROOM GAME (PROSECUTE THE CASE)</span>
+            <Gavel className="w-4 h-4 text-amber-400" />
+            <span>PROSECUTION TRIAL GAME</span>
           </button>
 
           <button
@@ -79,25 +95,29 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
               soundEngine.playKeyClick();
               setViewMode('docket');
             }}
-            className={`px-4 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
+            className={`px-3.5 py-2 text-xs font-pixel flex items-center space-x-2 rounded transition-all ${
               viewMode === 'docket'
-                ? 'bg-zinc-800 text-amber-300 border-2 border-amber-500 font-bold'
+                ? 'bg-zinc-800 text-emerald-300 border-2 border-emerald-500 font-bold'
                 : 'bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
             }`}
           >
-            <FileText className="w-4 h-4 text-amber-400" />
-            <span>EXAMINE AUDITED DOCKET RECORDS</span>
+            <FileText className="w-4 h-4 text-emerald-400" />
+            <span>AUDITED DOCKET RECORDS</span>
           </button>
         </div>
 
         <span className="text-[10px] font-pixel text-zinc-400 uppercase">
-          {viewMode === 'game'
-            ? 'INTERACTIVE SIMULATION MODE ACTIVE'
+          {viewMode === 'sim'
+            ? 'ADVERSARIAL COURTROOM SIMULATOR'
+            : viewMode === 'game'
+            ? '5-STAGE TRIAL CAMPAIGN'
             : 'HISTORICAL COURT RECORD ARCHIVE'}
         </span>
       </div>
 
-      {viewMode === 'game' ? (
+      {viewMode === 'sim' ? (
+        <CourtroomSim caseData={caseData} />
+      ) : viewMode === 'game' ? (
         <CaseCourtroomGame
           caseData={caseData}
           onViewExhibits={() => {
