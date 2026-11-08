@@ -99,18 +99,6 @@ export const Footer: React.FC<FooterProps> = ({ onOpenLogin, onOpenMethodology }
                   Survivor Dignity & Minor Privacy
                 </button>
               </li>
-              <li className="pt-1">
-                <button
-                  onClick={() => {
-                    soundEngine.playKeyClick();
-                    onOpenLogin();
-                  }}
-                  className="flex items-center text-zinc-500 hover:text-zinc-300 transition-colors text-[11px]"
-                >
-                  <Lock className="w-3 h-3 mr-1" />
-                  Investigator Terminal Login
-                </button>
-              </li>
             </ul>
           </div>
         </div>
@@ -119,7 +107,14 @@ export const Footer: React.FC<FooterProps> = ({ onOpenLogin, onOpenMethodology }
           <div>
             &copy; {new Date().getFullYear()} THE 302 DOCKET. All public case records and transcripts cited from official state and federal judicial dockets.
           </div>
-          <div className="flex items-center space-x-2">
+          <div
+            onDoubleClick={() => {
+              soundEngine.playBootBeep();
+              onOpenLogin();
+            }}
+            title="Terminal Kernel v4.19"
+            className="flex items-center space-x-2 cursor-pointer select-none"
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span className="text-zinc-400 font-pixel text-[10px]">TERMINAL_STATUS: ONLINE</span>
           </div>

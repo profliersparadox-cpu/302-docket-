@@ -8,6 +8,7 @@ interface InteractiveTerminalWindowProps {
   onSelectCase: (slug: string) => void;
   onOpenApp: (appId: string) => void;
   onShutdown: () => void;
+  onOpenLogin?: () => void;
 }
 
 interface CommandLog {
@@ -52,6 +53,7 @@ export const InteractiveTerminalWindow: React.FC<InteractiveTerminalWindowProps>
   onSelectCase,
   onOpenApp,
   onShutdown,
+  onOpenLogin,
 }) => {
   const [inputVal, setInputVal] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -268,6 +270,29 @@ export const InteractiveTerminalWindow: React.FC<InteractiveTerminalWindowProps>
     } else if (lower === 'stamps' || lower === 'badges' || lower === 'collectibles') {
       onOpenApp('collectibles');
       outputNode = <div className="text-emerald-400">LAUNCHING: ARCHIVE_STAMPS.EXE badge viewer...</div>;
+    } else if (
+      lower === 'clearance' ||
+      lower === 'login' ||
+      lower === 'babyyoda' ||
+      lower === 'agent' ||
+      lower === 'investigator' ||
+      lower === 'auth'
+    ) {
+      soundEngine.playBootBeep();
+      if (onOpenLogin) {
+        onOpenLogin();
+      }
+      outputNode = (
+        <div className="space-y-1 text-amber-300">
+          <div className="font-bold text-amber-400">[SECURITY OVERRIDE DETECTED // PROTOCOL 302]</div>
+          <div className="text-emerald-400 text-xs">
+            LAUNCHING: RESTRICTED INVESTIGATOR CLEARANCE GATEWAY...
+          </div>
+          <div className="text-zinc-500 text-[10px]">
+            Please enter your authenticated badge credentials in the secure security prompt.
+          </div>
+        </div>
+      );
     }
     // 8. SEARCH <query>
     else if (lower.startsWith('search ')) {

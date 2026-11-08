@@ -93,7 +93,15 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onNavigate('home')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 border border-zinc-700 bg-zinc-900 flex items-center justify-center rounded-sm group-hover:border-red-600/70 transition-colors shadow-inner">
+          <div
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              soundEngine.playBootBeep();
+              onOpenLogin();
+            }}
+            className="w-10 h-10 border border-zinc-700 bg-zinc-900 flex items-center justify-center rounded-sm group-hover:border-red-600/70 transition-colors shadow-inner"
+            title="THE 302 DOCKET"
+          >
             <Shield className="w-5 h-5 text-red-500" />
           </div>
           <div>
@@ -175,8 +183,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Investigator Access Button */}
-          {isAuthenticated ? (
+          {/* Authenticated Investigator Status */}
+          {isAuthenticated && (
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => onNavigate('admin')}
@@ -197,14 +205,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="px-3 py-1.5 text-xs font-mono text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-600 rounded transition-colors flex items-center bg-zinc-950/60"
-            >
-              <Lock className="w-3.5 h-3.5 mr-1.5 text-zinc-500" />
-              INVESTIGATOR ACCESS
-            </button>
           )}
         </div>
       </div>

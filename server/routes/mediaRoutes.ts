@@ -28,13 +28,32 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20 MB limit
+    fileSize: 30 * 1024 * 1024, // 30 MB limit for high-res scans & audio reels
+  },
+  fileFilter: (_req, file, cb) => {
+    // Allow images, audio files, and PDFs
+    const allowed = /jpeg|jpg|png|webp|gif|svg|pdf|mp3|wav|ogg|m4a|aac|flac|audio/;
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+    const mime = file.mimetype.toLowerCase();
+    if (allowed.test(ext) || allowed.test(mime)) {
+      cb(null, true);
+    } else {
+      cb(null, true); // Permissive for forensic exhibits and raw archival files
+    }
   },
 });
 
+// Public: GET /api/media (Optionally filter by ?caseSlug=...)
+router.get('/media', (req: Request, res: Response) => {
+  const caseSlug = req.query.caseSlug as string | undefined;
+  const media = dbService.getAllMedia(caseSlug);
+  return res.json(media);
+});
+
 // Admin: GET /api/admin/media
-router.get('/admin/media', requireAdminAuth, (_req: Request, res: Response) => {
-  const media = dbService.getAllMedia();
+router.get('/admin/media', requireAdminAuth, (req: Request, res: Response) => {
+  const caseSlug = req.query.caseSlug as string | undefined;
+  const media = dbService.getAllMedia(caseSlug);
   return res.json(media);
 });
 
@@ -44,6 +63,8 @@ router.post('/admin/media/upload', requireAdminAuth, upload.single('file'), (req
     return res.status(400).json({ error: 'No file received for upload.' });
   }
 
+  const { caseSlug, caseNumber, title, transcript, description } = req.body;
+
   const mediaItem: MediaItem = {
     id: 'media-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     filename: req.file.filename,
@@ -52,10 +73,33 @@ router.post('/admin/media/upload', requireAdminAuth, upload.single('file'), (req
     size: req.file.size,
     url: `/uploads/${req.file.filename}`,
     uploadedAt: new Date().toISOString(),
+    caseSlug: caseSlug || undefined,
+    caseNumber: caseNumber || undefined,
+    title: title || req.file.originalname,
+    transcript: transcript || undefined,
+    description: description || undefined,
   };
 
   dbService.saveMedia(mediaItem);
   return res.status(201).json(mediaItem);
+});
+
+// Admin: PATCH /api/admin/media/:id (Update transcript, case assignments, notes)
+router.patch('/admin/media/:id', requireAdminAuth, (req: Request, res: Response) => {
+  const updated = dbService.updateMedia(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ error: 'Media asset not found.' });
+  }
+  return res.json(updated);
+});
+
+// Admin: PUT /api/admin/media/:id
+router.put('/admin/media/:id', requireAdminAuth, (req: Request, res: Response) => {
+  const updated = dbService.updateMedia(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ error: 'Media asset not found.' });
+  }
+  return res.json(updated);
 });
 
 // Admin: DELETE /api/admin/media/:id

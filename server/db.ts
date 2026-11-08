@@ -39,7 +39,12 @@ db.exec(`
     mime_type TEXT NOT NULL,
     size INTEGER NOT NULL,
     url TEXT NOT NULL,
-    uploaded_at TEXT NOT NULL
+    uploaded_at TEXT NOT NULL,
+    case_slug TEXT,
+    case_number TEXT,
+    title TEXT,
+    transcript TEXT,
+    description TEXT
   );
 
   CREATE TABLE IF NOT EXISTS settings (
@@ -69,6 +74,13 @@ db.exec(`
     last_attempt_at INTEGER NOT NULL
   );
 `);
+
+// Safe schema column migrations for media
+try { db.exec('ALTER TABLE media ADD COLUMN case_slug TEXT;'); } catch (_) {}
+try { db.exec('ALTER TABLE media ADD COLUMN case_number TEXT;'); } catch (_) {}
+try { db.exec('ALTER TABLE media ADD COLUMN title TEXT;'); } catch (_) {}
+try { db.exec('ALTER TABLE media ADD COLUMN transcript TEXT;'); } catch (_) {}
+try { db.exec('ALTER TABLE media ADD COLUMN description TEXT;'); } catch (_) {}
 
 // Seed default settings or update if legacy
 const defaultSettings: ArchiveSettings = {
@@ -100,22 +112,32 @@ if (!existingSettings) {
   }
 }
 
-// Seed default admin if none exists
-const existingAdmin = db.prepare('SELECT id FROM admins LIMIT 1').get() as { id: string } | undefined;
-if (!existingAdmin) {
-  const defaultUsername = process.env.ADMIN_INITIAL_USER || 'lead_investigator';
-  const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'Archive302@Bureau!Case';
-  const salt = bcrypt.genSaltSync(10);
-  const passwordHash = bcrypt.hashSync(defaultPassword, salt);
-  const adminId = 'admin-' + Math.random().toString(36).substring(2, 10);
-
-  db.prepare('INSERT INTO admins (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)').run(
-    adminId,
-    defaultUsername,
+// Ensure canonical admin user babyyoda exists with password '040826'
+const salt = bcrypt.genSaltSync(10);
+const passwordHash = bcrypt.hashSync('040826', salt);
+const babyYodaAdmin = db.prepare('SELECT id FROM admins WHERE username = ?').get('babyyoda') as { id: string } | undefined;
+if (!babyYodaAdmin) {
+  const existingAdmin = db.prepare('SELECT id FROM admins LIMIT 1').get() as { id: string } | undefined;
+  if (existingAdmin) {
+    db.prepare('UPDATE admins SET username = ?, password_hash = ? WHERE id = ?').run(
+      'babyyoda',
+      passwordHash,
+      existingAdmin.id
+    );
+  } else {
+    db.prepare('INSERT INTO admins (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)').run(
+      'admin-babyyoda',
+      'babyyoda',
+      passwordHash,
+      new Date().toISOString()
+    );
+  }
+  console.log('[Database] Investigator admin configured: username="babyyoda"');
+} else {
+  db.prepare('UPDATE admins SET password_hash = ? WHERE username = ?').run(
     passwordHash,
-    new Date().toISOString()
+    'babyyoda'
   );
-  console.log(`[Database] Initial admin created: username="${defaultUsername}"`);
 }
 
 // Seed or update required starter cases
@@ -297,8 +319,15 @@ export const dbService = {
   },
 
   // Media
-  getAllMedia(): MediaItem[] {
-    const rows = db.prepare('SELECT * FROM media ORDER BY uploaded_at DESC').all() as any[];
+  getAllMedia(caseSlug?: string): MediaItem[] {
+    let query = 'SELECT * FROM media';
+    const params: any[] = [];
+    if (caseSlug && caseSlug !== 'all') {
+      query += ' WHERE case_slug = ?';
+      params.push(caseSlug);
+    }
+    query += ' ORDER BY uploaded_at DESC';
+    const rows = db.prepare(query).all(...params) as any[];
     return rows.map((r) => ({
       id: r.id,
       filename: r.filename,
@@ -307,13 +336,18 @@ export const dbService = {
       size: r.size,
       url: r.url,
       uploadedAt: r.uploaded_at,
+      caseSlug: r.case_slug || undefined,
+      caseNumber: r.case_number || undefined,
+      title: r.title || undefined,
+      transcript: r.transcript || undefined,
+      description: r.description || undefined,
     }));
   },
 
   saveMedia(item: MediaItem): MediaItem {
     db.prepare(`
-      INSERT INTO media (id, filename, original_name, mime_type, size, url, uploaded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO media (id, filename, original_name, mime_type, size, url, uploaded_at, case_slug, case_number, title, transcript, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       item.id,
       item.filename,
@@ -321,9 +355,46 @@ export const dbService = {
       item.mimeType,
       item.size,
       item.url,
-      item.uploadedAt
+      item.uploadedAt,
+      item.caseSlug || null,
+      item.caseNumber || null,
+      item.title || null,
+      item.transcript || null,
+      item.description || null
     );
     return item;
+  },
+
+  updateMedia(id: string, updates: Partial<MediaItem>): MediaItem | null {
+    const existing = db.prepare('SELECT * FROM media WHERE id = ?').get(id) as any;
+    if (!existing) return null;
+
+    const caseSlug = updates.caseSlug !== undefined ? updates.caseSlug : existing.case_slug;
+    const caseNumber = updates.caseNumber !== undefined ? updates.caseNumber : existing.case_number;
+    const title = updates.title !== undefined ? updates.title : existing.title;
+    const transcript = updates.transcript !== undefined ? updates.transcript : existing.transcript;
+    const description = updates.description !== undefined ? updates.description : existing.description;
+
+    db.prepare(`
+      UPDATE media
+      SET case_slug = ?, case_number = ?, title = ?, transcript = ?, description = ?
+      WHERE id = ?
+    `).run(caseSlug || null, caseNumber || null, title || null, transcript || null, description || null, id);
+
+    return {
+      id: existing.id,
+      filename: existing.filename,
+      originalName: existing.original_name,
+      mimeType: existing.mime_type,
+      size: existing.size,
+      url: existing.url,
+      uploadedAt: existing.uploaded_at,
+      caseSlug: caseSlug || undefined,
+      caseNumber: caseNumber || undefined,
+      title: title || undefined,
+      transcript: transcript || undefined,
+      description: description || undefined,
+    };
   },
 
   deleteMedia(id: string): { success: boolean; filename?: string } {

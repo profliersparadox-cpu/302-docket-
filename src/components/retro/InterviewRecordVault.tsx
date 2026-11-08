@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Mic,
   Play,
@@ -14,6 +14,11 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Plus,
+  Edit3,
+  X,
+  Save,
+  Tag,
 } from 'lucide-react';
 import { InterviewRecord, TranscriptLine } from '../../types.ts';
 import { archiveInterviewRecords } from '../../data/archiveVaultData.ts';
@@ -23,13 +28,43 @@ interface InterviewRecordVaultProps {
   onOpenCase?: (slug: string) => void;
 }
 
+const CASE_FILTERS = [
+  { id: 'all', label: 'ALL CASES' },
+  { id: '001', label: '#001 RAMSEY' },
+  { id: '002', label: '#002 GSK' },
+  { id: '003', label: '#003 PETITO' },
+  { id: '004', label: '#004 LINDBERGH' },
+  { id: '005', label: '#005 WETTERLING' },
+  { id: '006', label: '#006 NASSAR' },
+  { id: '007', label: '#007 EPSTEIN' },
+];
+
 export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOpenCase }) => {
   const [selectedRecordId, setSelectedRecordId] = useState<string>(archiveInterviewRecords[0].id);
   const [isPlayingTape, setIsPlayingTape] = useState(false);
-  const [typewriterProgress, setTypewriterProgress] = useState(100);
   const [filterQuoteType, setFilterQuoteType] = useState<'all' | 'quotes_only' | 'summaries_only'>('all');
+  const [activeCaseFilter, setActiveCaseFilter] = useState<string>('all');
 
-  const activeRecord = archiveInterviewRecords.find((r) => r.id === selectedRecordId) || archiveInterviewRecords[0];
+  // Custom transcript entries added by investigator
+  const [customTranscripts, setCustomTranscripts] = useState<Record<string, TranscriptLine[]>>(() => {
+    try {
+      const saved = localStorage.getItem('docket_custom_transcripts');
+      return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+
+  // Add transcript modal state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newTimestamp, setNewTimestamp] = useState('00:15:30');
+  const [newSpeaker, setNewSpeaker] = useState('');
+  const [newRole, setNewRole] = useState('Witness / Examiner');
+  const [newText, setNewText] = useState('');
+  const [newIsQuote, setNewIsQuote] = useState(true);
+
+  const activeRecord =
+    archiveInterviewRecords.find((r) => r.id === selectedRecordId) || archiveInterviewRecords[0];
 
   const togglePlayTape = () => {
     soundEngine.playKeyClick();
@@ -42,32 +77,73 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
     setIsPlayingTape(false);
   };
 
-  const filteredTranscripts = activeRecord.transcripts.filter((line) => {
+  const handleAddTranscriptLine = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSpeaker.trim() || !newText.trim()) return;
+
+    soundEngine.playKeyClick();
+    const newLine: TranscriptLine = {
+      timestamp: newTimestamp.trim() || '00:00:00',
+      speaker: newSpeaker.trim().toUpperCase(),
+      speakerRole: newRole.trim(),
+      text: newText.trim(),
+      isDirectQuote: newIsQuote,
+    };
+
+    const updatedMap = {
+      ...customTranscripts,
+      [activeRecord.id]: [...(customTranscripts[activeRecord.id] || []), newLine],
+    };
+
+    setCustomTranscripts(updatedMap);
+    try {
+      localStorage.setItem('docket_custom_transcripts', JSON.stringify(updatedMap));
+    } catch (_) {}
+
+    setIsAddModalOpen(false);
+    setNewText('');
+    setNewSpeaker('');
+    soundEngine.playBootBeep();
+  };
+
+  // Combine static and custom transcripts
+  const allTranscripts = [
+    ...activeRecord.transcripts,
+    ...(customTranscripts[activeRecord.id] || []),
+  ];
+
+  const filteredTranscripts = allTranscripts.filter((line) => {
     if (filterQuoteType === 'quotes_only') return line.isDirectQuote;
     if (filterQuoteType === 'summaries_only') return !line.isDirectQuote;
     return true;
   });
 
+  const filteredRecords = archiveInterviewRecords.filter((rec) => {
+    if (activeCaseFilter === 'all') return true;
+    return rec.caseNumber.includes(activeCaseFilter);
+  });
+
   return (
     <div className="flex flex-col md:flex-row h-full bg-[#0a0c10] text-zinc-300 font-tech select-none overflow-hidden">
       {/* Left Sidebar: Tape Selector Reel */}
-      <div className="w-full md:w-80 bg-[#0f1217] border-b md:border-b-0 md:border-r border-[#262c36] flex flex-col">
+      <div className="w-full md:w-84 bg-[#0f1217] border-b md:border-b-0 md:border-r border-[#262c36] flex flex-col shrink-0">
         <div className="p-3 border-b border-[#262c36] flex items-center justify-between">
           <div className="flex items-center space-x-1.5 text-xs font-mono text-amber-400">
             <Mic className="w-4 h-4 text-red-500" />
             <span className="font-bold">FD-302 INTERVIEW VAULT</span>
           </div>
           <span className="text-[10px] font-mono text-zinc-500">
-            {archiveInterviewRecords.length} ARCHIVES
+            {archiveInterviewRecords.length} CASES INDEXED
           </span>
         </div>
 
         {/* Vintage Cassette Tape Animation Deck */}
-        <div className="p-4 bg-[#141820] border-b border-[#262c36] flex flex-col items-center">
+        <div className="p-3 bg-[#141820] border-b border-[#262c36] flex flex-col items-center">
           <div className="w-full h-24 bg-zinc-900 border-2 border-zinc-700 rounded-lg p-2.5 flex flex-col justify-between shadow-inner relative overflow-hidden">
             {/* Cassette label */}
-            <div className="bg-amber-100/90 text-zinc-900 font-mono text-[9px] px-2 py-0.5 rounded font-bold uppercase truncate border border-amber-300">
-              AUDIO TAPE REEL // {activeRecord.recordingMedium}
+            <div className="bg-amber-100/90 text-zinc-900 font-mono text-[9px] px-2 py-0.5 rounded font-bold uppercase truncate border border-amber-300 flex items-center justify-between">
+              <span className="truncate">TAPE REEL // {activeRecord.caseNumber}</span>
+              <span className="text-[8px] text-zinc-700">{activeRecord.recordingMedium.split(' ')[0]}</span>
             </div>
 
             {/* Tape spools */}
@@ -102,18 +178,23 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
               </div>
             </div>
 
-            {/* Counter */}
-            <div className="flex justify-between items-center text-[9px] font-mono text-zinc-500">
-              <span>INDEX: 0492</span>
-              <span className="text-emerald-400 font-bold">{isPlayingTape ? 'PLAYING' : 'READY'}</span>
+            <div className="flex items-center justify-between text-[8px] font-mono text-zinc-500">
+              <span>MAGNETIC TAPE BIAS: NORMAL</span>
+              <span className={isPlayingTape ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                {isPlayingTape ? 'ROLLING [PLAY]' : 'PAUSED'}
+              </span>
             </div>
           </div>
 
           {/* Tape Controls */}
-          <div className="flex items-center justify-center space-x-2 mt-3 w-full">
+          <div className="flex items-center justify-center space-x-2 mt-2.5 w-full">
             <button
               onClick={togglePlayTape}
-              className="flex-1 py-1 px-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 font-mono text-xs rounded flex items-center justify-center space-x-1.5 transition-colors"
+              className={`flex-1 py-1.5 px-3 border font-mono text-xs rounded flex items-center justify-center space-x-1.5 transition-colors ${
+                isPlayingTape
+                  ? 'bg-amber-950/80 border-amber-600 text-amber-300 font-bold'
+                  : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-200'
+              }`}
             >
               {isPlayingTape ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5 text-emerald-400" />}
               <span>{isPlayingTape ? 'PAUSE PLAYBACK' : 'PLAY REEL'}</span>
@@ -121,9 +202,26 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
           </div>
         </div>
 
+        {/* Case-Wise Filter Pills */}
+        <div className="p-2 bg-[#0c0e12] border-b border-[#262c36] flex items-center space-x-1 overflow-x-auto text-[10px] font-mono">
+          {CASE_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setActiveCaseFilter(f.id)}
+              className={`px-2 py-0.5 rounded whitespace-nowrap ${
+                activeCaseFilter === f.id
+                  ? 'bg-amber-950 text-amber-300 border border-amber-600 font-bold'
+                  : 'text-zinc-400 hover:text-zinc-200 bg-zinc-900 border border-zinc-800'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {/* Record List */}
         <div className="flex-1 overflow-y-auto divide-y divide-zinc-900">
-          {archiveInterviewRecords.map((rec) => {
+          {filteredRecords.map((rec) => {
             const isSelected = rec.id === activeRecord.id;
             return (
               <button
@@ -136,7 +234,9 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
                 }`}
               >
                 <div className="flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-zinc-500 uppercase">{rec.caseNumber}</span>
+                  <span className="px-1.5 py-0.2 bg-red-950/80 text-red-300 border border-red-800 rounded font-bold">
+                    {rec.caseNumber.split('-')[1] ? `CASE ${rec.caseNumber.split('-')[1]}` : rec.caseNumber}
+                  </span>
                   <span className="text-amber-400 font-bold">{rec.recordingMedium.split(' ')[0]}</span>
                 </div>
                 <div className="text-xs font-bold text-zinc-200 line-clamp-1 font-mono">
@@ -157,44 +257,60 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
         <div className="p-4 bg-[#11141b] border-b border-[#262c36] space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span className="text-[10px] font-mono text-amber-500 uppercase tracking-widest block">
-                {activeRecord.classification}
-              </span>
+              <div className="flex items-center space-x-2 text-[10px] font-mono mb-1">
+                <span className="px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-800 rounded font-bold uppercase">
+                  {activeRecord.caseNumber}
+                </span>
+                <span className="text-zinc-500 uppercase tracking-widest">
+                  {activeRecord.classification}
+                </span>
+              </div>
               <h2 className="text-base sm:text-lg font-bold font-editorial text-zinc-100">
                 {activeRecord.title}
               </h2>
             </div>
 
-            {/* Filter buttons */}
-            <div className="flex items-center space-x-1 bg-zinc-900 p-1 border border-zinc-800 rounded text-[10px] font-mono">
+            {/* Actions: Add Transcript & Quote Filter */}
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => setFilterQuoteType('all')}
-                className={`px-2 py-0.5 rounded ${
-                  filterQuoteType === 'all' ? 'bg-zinc-800 text-phosphor' : 'text-zinc-500'
-                }`}
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 text-xs font-mono rounded flex items-center space-x-1 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                title="Add new dialogue or witness statement to this audio reel"
               >
-                ALL
+                <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                <span>+ ADD TRANSCRIPT</span>
               </button>
-              <button
-                onClick={() => setFilterQuoteType('quotes_only')}
-                className={`px-2 py-0.5 rounded ${
-                  filterQuoteType === 'quotes_only' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500'
-                }`}
-              >
-                DIRECT QUOTES
-              </button>
-              <button
-                onClick={() => setFilterQuoteType('summaries_only')}
-                className={`px-2 py-0.5 rounded ${
-                  filterQuoteType === 'summaries_only' ? 'bg-zinc-800 text-amber-400' : 'text-zinc-500'
-                }`}
-              >
-                SUMMARIES
-              </button>
+
+              <div className="flex items-center space-x-1 bg-zinc-900 p-1 border border-zinc-800 rounded text-[10px] font-mono">
+                <button
+                  onClick={() => setFilterQuoteType('all')}
+                  className={`px-2 py-0.5 rounded ${
+                    filterQuoteType === 'all' ? 'bg-zinc-800 text-phosphor' : 'text-zinc-500'
+                  }`}
+                >
+                  ALL
+                </button>
+                <button
+                  onClick={() => setFilterQuoteType('quotes_only')}
+                  className={`px-2 py-0.5 rounded ${
+                    filterQuoteType === 'quotes_only' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500'
+                  }`}
+                >
+                  DIRECT QUOTES
+                </button>
+                <button
+                  onClick={() => setFilterQuoteType('summaries_only')}
+                  className={`px-2 py-0.5 rounded ${
+                    filterQuoteType === 'summaries_only' ? 'bg-zinc-800 text-amber-400' : 'text-zinc-500'
+                  }`}
+                >
+                  SUMMARIES
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Metadata pill badges */}
+          {/* Metadata Badges */}
           <div className="flex flex-wrap gap-2 text-[11px] font-mono text-zinc-400 pt-1">
             <span className="bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
               INTERVIEWEE: <strong className="text-zinc-200">{activeRecord.interviewee}</strong>
@@ -207,7 +323,6 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
             </span>
           </div>
 
-          {/* Constitution Guarantee */}
           <div className="text-[10px] font-mono text-zinc-500 flex items-center space-x-1 pt-1">
             <Shield className="w-3.5 h-3.5 text-emerald-500" />
             <span>ETHICAL MANDATE: No invented dialogue. Original citations strictly preserved.</span>
@@ -286,7 +401,7 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
         {/* Footer Actions */}
         <div className="p-3 bg-[#0d1015] border-t border-[#262c36] flex items-center justify-between text-xs font-mono">
           <span className="text-zinc-500 text-[11px]">
-            TRANSCRIPT SEGMENTS: {filteredTranscripts.length} OF {activeRecord.transcripts.length}
+            TRANSCRIPT SEGMENTS: {filteredTranscripts.length} OF {allTranscripts.length}
           </span>
           {onOpenCase && activeRecord.caseSlug && (
             <button
@@ -299,6 +414,117 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
           )}
         </div>
       </div>
+
+      {/* Modal: Add Custom Transcript Segment */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12161f] border-2 border-emerald-500/80 rounded-lg max-w-md w-full p-5 shadow-2xl font-mono text-xs text-zinc-200">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+              <div className="flex items-center space-x-2 text-emerald-400 font-bold">
+                <Mic className="w-4 h-4 text-emerald-400" />
+                <span>APPEND AUDIO TRANSCRIPT ENTRY</span>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddTranscriptLine} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                    Timestamp *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newTimestamp}
+                    onChange={(e) => setNewTimestamp(e.target.value)}
+                    placeholder="00:15:30"
+                    className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                    Dialogue Classification
+                  </label>
+                  <select
+                    value={newIsQuote ? 'quote' : 'summary'}
+                    onChange={(e) => setNewIsQuote(e.target.value === 'quote')}
+                    className="w-full bg-zinc-950 border border-zinc-700 px-2 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="quote">Direct Quote</option>
+                    <option value="summary">Investigative Summary</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Speaker Identifier *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newSpeaker}
+                  onChange={(e) => setNewSpeaker(e.target.value)}
+                  placeholder="e.g. DETECTIVE / WITNESS / DEFENDANT"
+                  className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Speaker Professional Role
+                </label>
+                <input
+                  type="text"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  placeholder="e.g. Forensic Examiner / Case Agent"
+                  className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Spoken Dialogue / Testimony Transcript *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={newText}
+                  onChange={(e) => setNewText(e.target.value)}
+                  placeholder="Enter the verbatim spoken words or documented witness account..."
+                  className="w-full bg-zinc-950 border border-zinc-700 p-2.5 rounded text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-xs leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newSpeaker.trim() || !newText.trim()}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded flex items-center space-x-1.5 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>SAVE TO REEL</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

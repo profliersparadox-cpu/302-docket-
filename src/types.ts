@@ -209,6 +209,11 @@ export interface MediaItem {
   size: number;
   url: string;
   uploadedAt: string;
+  caseSlug?: string;
+  caseNumber?: string;
+  title?: string;
+  description?: string;
+  transcript?: string;
 }
 
 export interface CaseMediaItem {
@@ -221,6 +226,9 @@ export interface CaseMediaItem {
   recoveredAt?: string;
   duration?: string;
   classification?: string;
+  caseSlug?: string;
+  caseNumber?: string;
+  transcript?: string;
 }
 
 export interface TranscriptLine {

@@ -11,8 +11,8 @@ interface LoginModalProps {
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { login } = useAuth();
-  const [username, setUsername] = useState('lead_investigator');
-  const [password, setPassword] = useState('Archive302@Bureau!Case');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -80,6 +80,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter clearance identifier..."
+              autoFocus
               className="w-full bg-[#080a0c] border border-[#2d333b] p-2 text-zinc-100 font-terminal text-base focus:outline-none focus:border-red-600"
             />
           </div>
@@ -93,6 +95,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
               className="w-full bg-[#080a0c] border border-[#2d333b] p-2 text-zinc-100 font-terminal text-base focus:outline-none focus:border-red-600"
             />
           </div>
@@ -108,16 +111,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
             </button>
           </div>
         </form>
-
-        {/* Evaluation Helper */}
-        <div className="mt-5 pt-3 border-t border-[#21262d] text-[11px] font-tech text-zinc-500 bg-[#080a0c] p-2.5">
-          <span className="text-zinc-400 font-pixel text-[9px] block mb-1">DEFAULT SYSTEM CREDENTIALS:</span>
-          <div>Agent ID: <code className="text-amber-400">lead_investigator</code></div>
-          <div>Password: <code className="text-amber-400">Archive302@Bureau!Case</code></div>
-          <div className="text-[10px] text-zinc-600 mt-1">
-            * Backend rate-limited to 5 failed attempts per 15 minutes per IP address.
-          </div>
-        </div>
       </div>
     </div>
   );

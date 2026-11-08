@@ -133,6 +133,22 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
     return () => clearInterval(interval);
   }, []);
 
+  // Covert keyboard shortcut listener for investigator access: Ctrl+Alt+L or Ctrl+Shift+I
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === 'l') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'i')
+      ) {
+        e.preventDefault();
+        soundEngine.playBootBeep();
+        onOpenLogin();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onOpenLogin]);
+
   // Start menu state
   const [startMenuOpen, setStartMenuOpen] = useState(false);
 
@@ -315,8 +331,7 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
     exercises: { x: 136, y: 324 },
     collectibles: { x: 136, y: 424 },
     secret_folder: { x: 248, y: 24 },
-    investigator_access: { x: 248, y: 124 },
-    shutdown: { x: 248, y: 224 },
+    shutdown: { x: 248, y: 124 },
   };
 
   // Draggable desktop icon positions state (persisted)
@@ -598,13 +613,6 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
       onClick: handleUnlockSecretFolder,
     },
     {
-      id: 'investigator_access',
-      label: 'CLEARANCE.EXE',
-      icon: <KeyRound className="w-8 h-8 text-amber-300" />,
-      sublabel: 'Investigator Login',
-      onClick: onOpenLogin,
-    },
-    {
       id: 'shutdown',
       label: 'POWER_OFF.EXE',
       icon: <Power className="w-8 h-8 text-red-500" />,
@@ -631,7 +639,16 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
       >
         {/* Central Bureau Watermark with Green Phosphor Typewriter Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 px-4 text-center">
-          <div className="w-16 h-16 mb-4 border border-zinc-700/60 bg-zinc-950/80 rounded flex items-center justify-center opacity-30 shadow-inner">
+          {/* Covert clearance gateway: double-click shield emblem to authenticate */}
+          <div
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              soundEngine.playBootBeep();
+              onOpenLogin();
+            }}
+            title="Bureau Central Security Hub [Clearance Restricted]"
+            className="w-16 h-16 mb-4 border border-zinc-700/60 bg-zinc-950/80 rounded flex items-center justify-center opacity-30 hover:opacity-80 transition-opacity shadow-inner pointer-events-auto cursor-pointer"
+          >
             <Shield className="w-9 h-9 text-red-500" />
           </div>
           <h1 className="text-4xl sm:text-7xl font-pixel font-bold tracking-widest text-zinc-100/25 mb-4 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
@@ -644,7 +661,16 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
             </span>
             <span className="inline-block w-2.5 sm:w-3.5 h-4 sm:h-6 bg-emerald-400 animate-pulse ml-1 shadow-[0_0_8px_rgba(74,222,128,0.9)]" />
           </div>
-          <div className="text-[10px] sm:text-xs font-mono text-zinc-500/60 mt-4 tracking-widest uppercase">
+          {/* Covert clearance gateway: click OS version watermark */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              soundEngine.playBootBeep();
+              onOpenLogin();
+            }}
+            title="Kernel v4.19"
+            className="text-[10px] sm:text-xs font-mono text-zinc-500/60 hover:text-zinc-400 mt-4 tracking-widest uppercase pointer-events-auto cursor-pointer transition-colors"
+          >
             FEDERAL BUREAU INVESTIGATIVE ARCHIVE // OS v4.19
           </div>
         </div>
@@ -785,6 +811,7 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                     onSelectCase={handleOpenCase}
                     onOpenApp={openWindow}
                     onShutdown={onShutdown}
+                    onOpenLogin={onOpenLogin}
                   />
                 )}
                 {win.id === 'evidence_board' && (
@@ -1098,17 +1125,6 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                 </button>
 
                 <div className="pt-1 border-t border-zinc-800">
-                  <button
-                    onClick={() => {
-                      setStartMenuOpen(false);
-                      onOpenLogin();
-                    }}
-                    className="w-full px-2.5 py-1.5 text-left hover:bg-zinc-800 rounded flex items-center space-x-2 text-amber-300"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    <span>Investigator Access</span>
-                  </button>
-
                   <button
                     onClick={() => {
                       setStartMenuOpen(false);
