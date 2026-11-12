@@ -18,6 +18,7 @@ import {
   Tag,
   Shield,
   Layers,
+  Video,
 } from 'lucide-react';
 import { MediaItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
@@ -263,7 +264,7 @@ export const MediaLibrary: React.FC = () => {
               type="file"
               onChange={handleFileSelect}
               className="hidden"
-              accept="image/*,application/pdf,audio/*"
+              accept="audio/*,video/*,image/*,.mp3,.mp4,.m4a,.mpeg,.mpg,.wav,.ogg,.aac,.flac,.webm,.mov,.avi,.pdf"
             />
           </label>
         </div>
@@ -329,11 +330,30 @@ export const MediaLibrary: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMedia.map((item) => {
-            const isAudio = item.mimeType.startsWith('audio/') || item.originalName.endsWith('.mp3') || item.originalName.endsWith('.wav');
+            const isAudio =
+              item.mimeType.startsWith('audio/') ||
+              /\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(item.originalName) ||
+              /\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(item.filename);
+
+            const isVideo =
+              item.mimeType.startsWith('video/') ||
+              /\.(mp4|m4v|mpeg|mpg|webm|mov|avi)$/i.test(item.originalName) ||
+              /\.(mp4|m4v|mpeg|mpg|webm|mov|avi)$/i.test(item.filename);
+
             const isImage = item.mimeType.startsWith('image/');
             const sizeKb = (item.size / 1024).toFixed(1);
             const caseInfo = CASE_OPTIONS.find((c) => c.slug === item.caseSlug);
             const isTranscriptOpen = !!expandedTranscripts[item.id];
+
+            const formatLabel = isVideo
+              ? 'MP4 VIDEO / AUDIO'
+              : /\.(mp3)$/i.test(item.originalName) || item.mimeType === 'audio/mpeg' || item.mimeType === 'audio/mp3'
+              ? 'MP3 AUDIO REEL'
+              : isAudio
+              ? 'AUDIO REEL'
+              : isImage
+              ? 'PHOTO EXHIBIT'
+              : 'DOCUMENT';
 
             return (
               <div
@@ -346,13 +366,28 @@ export const MediaLibrary: React.FC = () => {
                     {item.caseNumber || caseInfo?.number || 'GENERAL'}
                   </span>
                   <span className="text-zinc-400 font-pixel uppercase">
-                    {isAudio ? 'AUDIO REEL' : isImage ? 'PHOTO EXHIBIT' : 'DOCUMENT'}
+                    {formatLabel}
                   </span>
                 </div>
 
                 {/* Media Preview Box */}
                 <div className="p-3 bg-[#080a0e] flex flex-col items-center justify-center border-b border-zinc-900 min-h-[140px]">
-                  {isAudio ? (
+                  {isVideo ? (
+                    <div className="w-full space-y-2">
+                      <div className="flex items-center space-x-2 text-zinc-300 text-xs font-mono">
+                        <Video className="w-4 h-4 text-amber-400" />
+                        <span className="truncate font-bold">{item.title || item.originalName}</span>
+                      </div>
+                      <video
+                        controls
+                        playsInline
+                        src={item.url}
+                        className="w-full max-h-48 rounded bg-black border border-zinc-800"
+                      >
+                        Your browser does not support video playback.
+                      </video>
+                    </div>
+                  ) : isAudio ? (
                     <div className="w-full space-y-3">
                       <div className="flex items-center space-x-2 text-zinc-300 text-xs font-mono">
                         <Music className="w-5 h-5 text-red-500 animate-pulse" />
@@ -495,6 +530,9 @@ export const MediaLibrary: React.FC = () => {
                 </label>
                 <div className="p-2 bg-zinc-950 border border-zinc-800 rounded text-amber-300 truncate">
                   {selectedFile?.name} ({((selectedFile?.size || 0) / 1024).toFixed(1)} KB)
+                </div>
+                <div className="text-[10px] text-zinc-500 font-mono mt-1">
+                  Compatible with MP files (.mp3, .mp4, .m4a, .mpeg, .mpg), WAV, and OGG up to 50MB.
                 </div>
               </div>
 

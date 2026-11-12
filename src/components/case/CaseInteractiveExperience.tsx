@@ -43,6 +43,7 @@ import {
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { CaseEvidenceBoardView } from './CaseEvidenceBoardView.tsx';
 import { CaseTimelineView } from './CaseTimelineView.tsx';
+import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
 import { CaseMediaVaultView } from './CaseMediaVaultView.tsx';
 import { CaseColdCaseTheoryLab } from './CaseColdCaseTheoryLab.tsx';
 
@@ -664,25 +665,17 @@ ${caseData.verdict.appealsAndRulings}`,
             </div>
 
             {/* Transcript & Reel View */}
-            <div className="flex-1 p-6 overflow-y-auto bg-zinc-950 space-y-4 font-mono text-xs">
-              <div className="p-3 bg-zinc-900/80 border border-zinc-800 rounded flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-zinc-100">{activeInterview.title}</h4>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">
-                    Interviewee: {activeInterview.interviewee} • Medium: {activeInterview.recordingMedium}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    soundEngine.playKeyClick();
-                    setIsPlayingTape((prev) => !prev);
-                  }}
-                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 rounded flex items-center space-x-1.5"
-                >
-                  {isPlayingTape ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5 text-emerald-400" />}
-                  <span>{isPlayingTape ? 'PAUSE' : 'PLAY TAPE'}</span>
-                </button>
-              </div>
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-zinc-950 space-y-4 font-mono text-xs">
+              {/* Full Featured Audio Player for Interview Reel */}
+              <RetroAudioPlayer
+                key={activeInterview.id}
+                title={activeInterview.title}
+                caseNumber={caseData.caseNumber}
+                transcript={activeInterview.transcripts?.map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join('\n') || activeInterview.summary}
+                mediaType="audio"
+                defaultDuration={240}
+                compact
+              />
 
               {/* Transcript Lines */}
               <div className="space-y-3">
@@ -695,9 +688,20 @@ ${caseData.verdict.appealsAndRulings}`,
                   >
                     <div className="flex items-center justify-between text-[10px] mb-1">
                       <span className="text-zinc-500 font-bold">[{line.timestamp}] {line.speaker}</span>
-                      <span className={`px-1.5 py-0.2 rounded font-bold ${line.isDirectQuote ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {line.isDirectQuote ? 'VERIFIED QUOTE' : 'OFFICIAL SUMMARY'}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => soundEngine.speakTranscriptLine(line.text, line.speaker)}
+                          title="Listen to this line via speech synthesizer"
+                          className="px-1.5 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-300 rounded text-[9px] flex items-center space-x-1"
+                        >
+                          <Volume2 className="w-2.5 h-2.5 text-amber-400" />
+                          <span>LISTEN</span>
+                        </button>
+                        <span className={`px-1.5 py-0.2 rounded font-bold ${line.isDirectQuote ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {line.isDirectQuote ? 'VERIFIED QUOTE' : 'OFFICIAL SUMMARY'}
+                        </span>
+                      </div>
                     </div>
                     <p className={`text-xs ${line.isDirectQuote ? 'font-typewriter text-zinc-200' : 'text-zinc-300 italic'}`}>
                       {line.text}

@@ -28,17 +28,24 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 30 * 1024 * 1024, // 30 MB limit for high-res scans & audio reels
+    fileSize: 50 * 1024 * 1024, // 50 MB limit for MP3 audio reels, MP4 video/wiretaps & high-res scans
   },
   fileFilter: (_req, file, cb) => {
-    // Allow images, audio files, and PDFs
-    const allowed = /jpeg|jpg|png|webp|gif|svg|pdf|mp3|wav|ogg|m4a|aac|flac|audio/;
+    // Explicitly allow MP files (.mp3, .mp4, .m4a, .mpeg, .mpg), audio, video, images, PDFs
+    const allowedExts = /^(jpeg|jpg|png|webp|gif|svg|pdf|mp3|mp4|m4a|m4v|mpeg|mpg|wav|ogg|aac|flac|webm|avi|mov)$/i;
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
     const mime = file.mimetype.toLowerCase();
-    if (allowed.test(ext) || allowed.test(mime)) {
+
+    if (
+      allowedExts.test(ext) ||
+      mime.startsWith('audio/') ||
+      mime.startsWith('video/') ||
+      mime.startsWith('image/') ||
+      mime === 'application/pdf'
+    ) {
       cb(null, true);
     } else {
-      cb(null, true); // Permissive for forensic exhibits and raw archival files
+      cb(null, true); // Permissive for historical forensic digital exhibits
     }
   },
 });

@@ -12,9 +12,12 @@ import {
   Lock,
   ExternalLink,
   Plus,
+  Volume2,
+  Radio,
 } from 'lucide-react';
 import { CaseFile, EvidenceItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
 
 interface CaseEvidenceViewProps {
   caseData: CaseFile;
@@ -212,9 +215,17 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
 
             {/* Bottom Actions: Inspect & Pin to Board */}
             <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs font-tech">
-              <span className="uppercase text-[10px] text-zinc-500 font-pixel">
-                {ev.type}
-              </span>
+              <div className="flex items-center space-x-1.5">
+                <span className="uppercase text-[10px] text-zinc-500 font-pixel">
+                  {ev.type}
+                </span>
+                {(ev.type === 'audio' || /audio|wiretap|recording|dispatch|tape|call/i.test(ev.title)) && (
+                  <span className="px-1.5 py-0.2 bg-amber-950 border border-amber-700 text-amber-300 text-[9px] font-pixel rounded flex items-center space-x-0.5">
+                    <Volume2 className="w-2.5 h-2.5 text-amber-400" />
+                    <span>AUDIO REEL</span>
+                  </span>
+                )}
+              </div>
 
               <div className="flex items-center space-x-2">
                 <button
@@ -279,6 +290,21 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Embedded Audio Player for Audio Exhibits */}
+              {(selectedEvidence.type === 'audio' ||
+                /audio|wiretap|recording|dispatch|tape|call/i.test(selectedEvidence.title) ||
+                /audio|wiretap|recording|dispatch|tape|call/i.test(selectedEvidence.description)) && (
+                <div className="mb-2">
+                  <RetroAudioPlayer
+                    title={selectedEvidence.title}
+                    caseNumber={caseData.caseNumber}
+                    transcript={selectedEvidence.description}
+                    mediaType="audio"
+                    defaultDuration={180}
+                  />
+                </div>
+              )}
 
               {/* Description Block */}
               <div className="bg-[#0b0e11] p-3.5 border border-zinc-800 space-y-1">

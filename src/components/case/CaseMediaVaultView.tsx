@@ -1,27 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Volume2,
-  Play,
-  Pause,
-  RotateCcw,
-  Maximize2,
   FileText,
   Image as ImageIcon,
   Radio,
-  Clock,
-  Shield,
-  Download,
   Search,
   X,
-  ExternalLink,
   Edit3,
   Save,
   CheckCircle,
   FileAudio,
+  Video,
+  Play,
 } from 'lucide-react';
 import { CaseFile, CaseMediaItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { archiveInterviewRecords } from '../../data/archiveVaultData.ts';
+import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
 
 interface CaseMediaVaultViewProps {
   caseData: CaseFile;
@@ -32,14 +27,6 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
   const [selectedMedia, setSelectedMedia] = useState<CaseMediaItem | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-
-  // Audio player state
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(180);
-  const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
-  const [bufferProgress, setBufferProgress] = useState<number>(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Transcript state & modal
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
@@ -141,78 +128,10 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
     }
   }, [caseData]);
 
-  // Audio simulation timer or HTML5 audio playback sync
-  useEffect(() => {
-    let timer: any;
-    if (isPlaying) {
-      timer = setInterval(() => {
-        if (audioRef.current && !audioRef.current.paused) {
-          setCurrentTime(Math.floor(audioRef.current.currentTime));
-          if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-            setDuration(Math.floor(audioRef.current.duration));
-          }
-        } else {
-          setCurrentTime((prev) => {
-            if (prev >= duration) {
-              setIsPlaying(false);
-              return 0;
-            }
-            return prev + 1;
-          });
-        }
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isPlaying, duration]);
-
   // Handle selecting an audio or media file
   const handleSelectMedia = (m: CaseMediaItem) => {
     soundEngine.playFileAccess();
     setSelectedMedia(m);
-    setIsPlaying(false);
-    setCurrentTime(0);
-
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    if (m.mediaType === 'audio' || m.mediaType === 'recording' || m.mediaType === 'wiretap') {
-      setIsLoadingAudio(true);
-      setBufferProgress(0);
-
-      let p = 0;
-      const interval = setInterval(() => {
-        p += 25;
-        setBufferProgress(p);
-        if (p >= 100) {
-          clearInterval(interval);
-          setIsLoadingAudio(false);
-        }
-      }, 70);
-    }
-  };
-
-  const togglePlay = () => {
-    soundEngine.playKeyClick();
-    if (audioRef.current && selectedMedia?.url) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {
-          setIsPlaying(!isPlaying);
-        });
-      }
-    } else {
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const handleOpenTranscriptModal = () => {
@@ -239,8 +158,20 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
     }, 900);
   };
 
+  const isAudioOrMedia = (m: CaseMediaItem) => {
+    return (
+      m.mediaType === 'audio' ||
+      m.mediaType === 'recording' ||
+      m.mediaType === 'wiretap' ||
+      m.mediaType === 'video' ||
+      (m.url && /\.(mp3|mp4|m4a|wav|ogg|mpeg|mpg)$/i.test(m.url)) ||
+      /\.(mp3|mp4|m4a|wav|ogg|mpeg|mpg)$/i.test(m.title)
+    );
+  };
+
   const filteredMedia = mediaList.filter((m) => {
-    if (filterType !== 'all' && m.mediaType !== filterType) return false;
+    if (filterType === 'audio' && !isAudioOrMedia(m)) return false;
+    if (filterType === 'image' && isAudioOrMedia(m)) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       return (
@@ -254,21 +185,6 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
 
   return (
     <div className="space-y-6">
-      {/* Hidden real audio element for authentic audio playback */}
-      {selectedMedia?.url && (
-        <audio
-          ref={audioRef}
-          src={selectedMedia.url}
-          onEnded={() => setIsPlaying(false)}
-          onLoadedMetadata={() => {
-            if (audioRef.current && audioRef.current.duration) {
-              setDuration(Math.floor(audioRef.current.duration));
-            }
-          }}
-          className="hidden"
-        />
-      )}
-
       {/* Header Bar with Case-Wise Label */}
       <div className="retro-window p-4 flex flex-wrap items-center justify-between gap-4 bg-[#080b0e]">
         <div className="flex items-center space-x-3">
@@ -312,7 +228,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
             className="bg-black/70 border border-zinc-800 text-xs font-tech text-zinc-300 px-2.5 py-1.5 rounded focus:border-amber-600 focus:outline-none"
           >
             <option value="all">ALL MEDIA ({mediaList.length})</option>
-            <option value="audio">Audio / Recordings</option>
+            <option value="audio">Audio & MP Recordings</option>
             <option value="image">Photographs / Scans</option>
           </select>
         </div>
@@ -330,10 +246,15 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
               CASE {caseData.caseNumber}
             </span>
           </div>
-          <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
             {filteredMedia.map((m) => {
               const isSelected = selectedMedia?.id === m.id;
-              const isAudio = m.mediaType === 'audio' || m.mediaType === 'recording';
+              const hasAudio = isAudioOrMedia(m);
+              const isVideo =
+                m.mediaType === 'video' || (m.url && /\.(mp4|m4v|mpeg|mpg|webm)$/i.test(m.url));
+              const isMp =
+                (m.url && /\.(mp3|mp4|m4a|mpeg|mpg)$/i.test(m.url)) ||
+                /\.(mp3|mp4|m4a|mpeg|mpg)$/i.test(m.title);
 
               return (
                 <div
@@ -347,8 +268,14 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 >
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="text-amber-400 uppercase font-pixel flex items-center">
-                      {isAudio ? <Volume2 className="w-3 h-3 mr-1" /> : <ImageIcon className="w-3 h-3 mr-1" />}
-                      {m.mediaType}
+                      {isVideo ? (
+                        <Video className="w-3 h-3 mr-1 text-red-400" />
+                      ) : hasAudio ? (
+                        <Volume2 className="w-3 h-3 mr-1 text-emerald-400" />
+                      ) : (
+                        <ImageIcon className="w-3 h-3 mr-1 text-indigo-400" />
+                      )}
+                      {isVideo ? 'MP4 VIDEO' : isMp ? 'MP3 AUDIO' : m.mediaType}
                     </span>
                     <span className="px-1.5 py-0.2 bg-zinc-900 border border-zinc-700 text-zinc-400 rounded text-[9px]">
                       {m.caseNumber || caseData.caseNumber}
@@ -363,12 +290,22 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                     {m.description}
                   </p>
 
-                  {isAudio && m.transcript && (
-                    <div className="flex items-center space-x-1 text-[9px] text-emerald-400 font-mono pt-1">
-                      <FileText className="w-2.5 h-2.5 text-emerald-400" />
-                      <span>TRANSCRIPT VERIFIED</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    {hasAudio ? (
+                      <span className="text-[9px] text-emerald-400 font-pixel flex items-center">
+                        <Play className="w-2.5 h-2.5 mr-0.5" /> AUDIO PLAYER READY
+                      </span>
+                    ) : (
+                      <span className="text-[9px] text-zinc-500 font-pixel">EXHIBIT SCAN</span>
+                    )}
+
+                    {m.transcript && (
+                      <span className="flex items-center space-x-1 text-[9px] text-amber-400 font-mono">
+                        <FileText className="w-2.5 h-2.5" />
+                        <span>TRANSCRIPT</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -376,7 +313,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
         </div>
 
         {/* Active Media File Viewer */}
-        <div className="md:col-span-2 retro-window p-6 bg-[#07090b] border-2 border-zinc-700 flex flex-col justify-between space-y-4">
+        <div className="md:col-span-2 retro-window p-5 sm:p-6 bg-[#07090b] border-2 border-zinc-700 flex flex-col justify-between space-y-4">
           {selectedMedia ? (
             <>
               {/* Media Title & Classification */}
@@ -400,133 +337,19 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 </div>
               </div>
 
-              {/* AUDIO PLAYER VIEW */}
-              {selectedMedia.mediaType === 'audio' ||
-              selectedMedia.mediaType === 'recording' ||
-              selectedMedia.mediaType === 'wiretap' ? (
-                <div className="space-y-5 font-mono text-xs">
-                  {/* Brief Loading Animation */}
-                  {isLoadingAudio ? (
-                    <div className="p-8 text-center space-y-3 bg-black/80 border border-zinc-800 rounded">
-                      <div className="font-pixel text-xs text-amber-400 animate-pulse">
-                        SPOOLING MAGNETIC TAPE CASSETTE... [{bufferProgress}%]
-                      </div>
-                      <div className="w-48 mx-auto h-2 bg-zinc-900 border border-zinc-700 rounded overflow-hidden">
-                        <div
-                          className="h-full bg-amber-500 transition-all duration-100"
-                          style={{ width: `${bufferProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    /* Retro Reel-to-Reel Tape Deck Graphic */
-                    <div className="p-6 bg-gradient-to-b from-[#14181f] to-[#0a0d12] border-2 border-zinc-700 rounded-lg shadow-2xl flex flex-col items-center justify-center space-y-5">
-                      <div className="flex items-center justify-around w-full max-w-md">
-                        {/* Left Reel */}
-                        <div
-                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-zinc-700 bg-zinc-900 flex items-center justify-center relative shadow-inner ${
-                            isPlaying ? 'animate-spin' : ''
-                          }`}
-                          style={{ animationDuration: '3s' }}
-                        >
-                          <div className="w-6 h-6 rounded-full bg-zinc-950 border border-zinc-600 flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-zinc-400" />
-                          </div>
-                          <div className="absolute w-1 h-8 bg-zinc-600" />
-                          <div className="absolute h-1 w-8 bg-zinc-600" />
-                        </div>
-
-                        {/* Center Tape Window */}
-                        <div className="text-center font-mono space-y-1">
-                          <span className="text-[10px] font-pixel text-emerald-400 block tracking-widest">
-                            {isPlaying ? 'MAGNETIC TAPE RUNNING' : 'AUDIO DECK READY'}
-                          </span>
-                          <span className="text-xl sm:text-2xl font-bold text-amber-400 tracking-wider">
-                            {formatTime(currentTime)} / {formatTime(duration)}
-                          </span>
-                        </div>
-
-                        {/* Right Reel */}
-                        <div
-                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-zinc-700 bg-zinc-900 flex items-center justify-center relative shadow-inner ${
-                            isPlaying ? 'animate-spin' : ''
-                          }`}
-                          style={{ animationDuration: '3s' }}
-                        >
-                          <div className="w-6 h-6 rounded-full bg-zinc-950 border border-zinc-600 flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-zinc-400" />
-                          </div>
-                          <div className="absolute w-1 h-8 bg-zinc-600" />
-                          <div className="absolute h-1 w-8 bg-zinc-600" />
-                        </div>
-                      </div>
-
-                      {/* Scrubber Progress Bar */}
-                      <div className="w-full space-y-1">
-                        <div
-                          onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const clickPos = (e.clientX - rect.left) / rect.width;
-                            const newTime = Math.floor(clickPos * duration);
-                            setCurrentTime(newTime);
-                            if (audioRef.current) {
-                              audioRef.current.currentTime = newTime;
-                            }
-                          }}
-                          className="w-full bg-zinc-900 h-2 border border-zinc-800 rounded overflow-hidden cursor-pointer"
-                        >
-                          <div
-                            className="bg-amber-500 h-full transition-all duration-150"
-                            style={{ width: `${(currentTime / duration) * 100}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-zinc-500 font-pixel">
-                          <span>{formatTime(currentTime)}</span>
-                          <span>{formatTime(duration)}</span>
-                        </div>
-                      </div>
-
-                      {/* Playback Controls & Action */}
-                      <div className="flex items-center space-x-4">
-                        <button
-                          onClick={() => {
-                            soundEngine.playKeyClick();
-                            setCurrentTime(0);
-                            if (audioRef.current) audioRef.current.currentTime = 0;
-                          }}
-                          title="Rewind to start"
-                          className="retro-btn p-2"
-                        >
-                          <RotateCcw className="w-4 h-4 text-zinc-400" />
-                        </button>
-
-                        <button
-                          onClick={togglePlay}
-                          className="retro-btn px-6 py-2 border-amber-600 text-amber-300 font-pixel flex items-center space-x-2 text-xs hover:bg-amber-950/60 shadow-[0_0_10px_rgba(251,191,36,0.3)]"
-                        >
-                          {isPlaying ? (
-                            <>
-                              <Pause className="w-4 h-4" />
-                              <span>PAUSE TAPE</span>
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4" />
-                              <span>START PLAYBACK</span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={handleOpenTranscriptModal}
-                          className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono rounded flex items-center space-x-1.5 transition-colors"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                          <span>{selectedMedia.transcript ? 'EDIT TRANSCRIPT' : '+ ADD TRANSCRIPT'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+              {/* AUDIO & VIDEO PLAYER VIEW */}
+              {isAudioOrMedia(selectedMedia) ? (
+                <div className="space-y-4 font-mono text-xs">
+                  {/* Robust 90s Law Enforcement Retro Audio Player */}
+                  <RetroAudioPlayer
+                    key={selectedMedia.id}
+                    url={selectedMedia.url}
+                    title={selectedMedia.title}
+                    caseNumber={selectedMedia.caseNumber || caseData.caseNumber}
+                    transcript={selectedMedia.transcript}
+                    mediaType={selectedMedia.mediaType}
+                    defaultDuration={240}
+                  />
 
                   {/* Audio Provenance & Context */}
                   <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1">

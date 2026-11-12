@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { CaseFile, InterviewRecord, TranscriptLine } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
 
 interface CaseWitnessStatementsViewProps {
   caseData: CaseFile;
@@ -380,6 +381,18 @@ export const CaseWitnessStatementsView: React.FC<CaseWitnessStatementsViewProps>
                   </div>
                 </div>
 
+                {/* Embedded Audio Reel Player for Witness Deposition */}
+                <div className="mb-2">
+                  <RetroAudioPlayer
+                    title={activeDoc.title}
+                    caseNumber={activeDoc.caseNumber}
+                    transcript={activeDoc.transcripts?.map((t: TranscriptLine) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join('\n') || activeDoc.summary}
+                    mediaType="audio"
+                    defaultDuration={240}
+                    compact
+                  />
+                </div>
+
                 {/* Sworn Interview Executive Summary with Typing Cursor */}
                 <div className="border border-zinc-800 p-4 bg-black/60 space-y-2">
                   <div className="font-pixel text-[10px] text-amber-400 uppercase tracking-wider flex items-center">
@@ -409,13 +422,24 @@ export const CaseWitnessStatementsView: React.FC<CaseWitnessStatementsViewProps>
                             [{line.timestamp}]
                           </span>
                           <div className="flex-1 space-y-0.5">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-bold text-amber-400 font-tech">
-                                {line.speaker}
-                              </span>
-                              <span className="text-[10px] font-pixel text-zinc-500">
-                                ({line.speakerRole})
-                              </span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <span className="font-bold text-amber-400 font-tech">
+                                  {line.speaker}
+                                </span>
+                                <span className="text-[10px] font-pixel text-zinc-500">
+                                  ({line.speakerRole})
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => soundEngine.speakTranscriptLine(line.text, line.speaker)}
+                                title="Listen to this line via radio speech synthesizer"
+                                className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-300 rounded text-[9px] flex items-center space-x-1 border border-zinc-700 transition-colors"
+                              >
+                                <Volume2 className="w-2.5 h-2.5 text-amber-400" />
+                                <span>LISTEN</span>
+                              </button>
                             </div>
                             <p
                               className={`text-zinc-300 leading-relaxed font-mono ${

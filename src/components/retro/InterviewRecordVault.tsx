@@ -23,6 +23,7 @@ import {
 import { InterviewRecord, TranscriptLine } from '../../types.ts';
 import { archiveInterviewRecords } from '../../data/archiveVaultData.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
 
 interface InterviewRecordVaultProps {
   onOpenCase?: (slug: string) => void;
@@ -329,6 +330,19 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
           </div>
         </div>
 
+        {/* Embedded Audio Reel Player */}
+        <div className="p-3 bg-black/70 border-b border-[#262c36]">
+          <RetroAudioPlayer
+            key={activeRecord.id}
+            title={activeRecord.title}
+            caseNumber={activeRecord.caseNumber}
+            transcript={allTranscripts.map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join('\n')}
+            mediaType="audio"
+            defaultDuration={240}
+            compact
+          />
+        </div>
+
         {/* Transcript Dialogue Scroll Window */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 font-mono text-xs">
           {filteredTranscripts.map((line, idx) => (
@@ -358,16 +372,29 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
                   </span>
                 </div>
 
-                {/* Badge: Direct Quote vs Summary */}
-                <span
-                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider ${
-                    line.isDirectQuote
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                      : 'bg-amber-950 text-amber-300 border border-amber-800'
-                  }`}
-                >
-                  {line.isDirectQuote ? 'VERIFIED DIRECT QUOTE' : 'OFFICIAL INVESTIGATIVE SUMMARY'}
-                </span>
+                <div className="flex items-center space-x-2">
+                  {/* Speaker Listen Button */}
+                  <button
+                    type="button"
+                    onClick={() => soundEngine.speakTranscriptLine(line.text, line.speaker)}
+                    title="Listen to this line via radio speech synthesizer"
+                    className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-300 rounded text-[9px] flex items-center space-x-1 border border-zinc-700 transition-colors"
+                  >
+                    <Volume2 className="w-2.5 h-2.5 text-amber-400" />
+                    <span>LISTEN</span>
+                  </button>
+
+                  {/* Badge: Direct Quote vs Summary */}
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider ${
+                      line.isDirectQuote
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    }`}
+                  >
+                    {line.isDirectQuote ? 'VERIFIED DIRECT QUOTE' : 'OFFICIAL INVESTIGATIVE SUMMARY'}
+                  </span>
+                </div>
               </div>
 
               {/* Spoken Text */}
