@@ -57,6 +57,33 @@ router.get('/media', (req: Request, res: Response) => {
   return res.json(media);
 });
 
+// Investigator / User: POST /api/media/upload (Open upload for case exhibits, audio reels & PDF records)
+router.post('/media/upload', upload.single('file'), (req: Request, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file received for upload.' });
+  }
+
+  const { caseSlug, caseNumber, title, transcript, description } = req.body;
+
+  const mediaItem: MediaItem = {
+    id: 'media-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+    filename: req.file.filename,
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+    url: `/uploads/${req.file.filename}`,
+    uploadedAt: new Date().toISOString(),
+    caseSlug: caseSlug || undefined,
+    caseNumber: caseNumber || undefined,
+    title: title || req.file.originalname,
+    transcript: transcript || undefined,
+    description: description || undefined,
+  };
+
+  dbService.saveMedia(mediaItem);
+  return res.status(201).json(mediaItem);
+});
+
 // Admin: GET /api/admin/media
 router.get('/admin/media', requireAdminAuth, (req: Request, res: Response) => {
   const caseSlug = req.query.caseSlug as string | undefined;

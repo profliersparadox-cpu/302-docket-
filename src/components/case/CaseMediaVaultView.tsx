@@ -12,11 +12,23 @@ import {
   FileAudio,
   Video,
   Play,
+  Upload,
+  AlertCircle,
 } from 'lucide-react';
 import { CaseFile, CaseMediaItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { archiveInterviewRecords } from '../../data/archiveVaultData.ts';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
+import { RetroPdfViewer } from '../common/RetroPdfViewer.tsx';
+import {
+  fetchAllMedia,
+  uploadMediaFile,
+  isAudioMedia,
+  isPdfMedia,
+  isVideoMedia,
+  convertMediaToCaseMedia,
+  MEDIA_UPDATED_EVENT,
+} from '../../utils/mediaVault.ts';
 
 interface CaseMediaVaultViewProps {
   caseData: CaseFile;
@@ -28,13 +40,22 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  // Upload modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDesc, setUploadDesc] = useState('');
+  const [uploadTranscript, setUploadTranscript] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // Transcript state & modal
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
   const [transcriptDraft, setTranscriptDraft] = useState('');
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
 
-  // Populate media items with case labels and authentic transcripts
-  useEffect(() => {
+  // Populate media items with case labels, authentic transcripts, and uploaded assets
+  const loadMedia = async () => {
     const list: CaseMediaItem[] = [];
 
     // Find authentic transcripts from archiveInterviewRecords matching this case
@@ -69,7 +90,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
           id: evId,
           title: ev.title,
           mediaType: 'audio',
-          url: '',
+          url: ev.imageUrl || '',
           description: ev.description,
           source: ev.significance || 'State Police Communications Dispatch Recording',
           recoveredAt: ev.recoveredAt || `${caseData.year}-05-14`,
@@ -122,11 +143,67 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
       });
     });
 
-    setMediaList(list);
-    if (list.length > 0 && !selectedMedia) {
-      setSelectedMedia(list[0]);
+    // 5. Load all uploaded media matching this case
+    try {
+      const uploaded = await fetchAllMedia(caseData.slug);
+      const convertedUploaded = uploaded.map((m) => convertMediaToCaseMedia(m));
+      const combined = [...convertedUploaded, ...list];
+      setMediaList(combined);
+      if (combined.length > 0) {
+        setSelectedMedia((prev) => prev ? (combined.find((c) => c.id === prev.id) || combined[0]) : combined[0]);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch case media:', err);
+      setMediaList(list);
+      if (list.length > 0 && !selectedMedia) {
+        setSelectedMedia(list[0]);
+      }
     }
-  }, [caseData]);
+  };
+
+  useEffect(() => {
+    loadMedia();
+
+    const handleUpdate = () => {
+      loadMedia();
+    };
+    window.addEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+  }, [caseData.slug]);
+
+  // Handle direct file upload
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      soundEngine.playKeyClick();
+      const newMedia = await uploadMediaFile(uploadFile, {
+        caseSlug: caseData.slug,
+        caseNumber: caseData.caseNumber,
+        title: uploadTitle.trim() || uploadFile.name,
+        description: uploadDesc.trim(),
+        transcript: uploadTranscript.trim(),
+      });
+
+      soundEngine.playBootBeep();
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadTitle('');
+      setUploadDesc('');
+      setUploadTranscript('');
+
+      await loadMedia();
+      setSelectedMedia(convertMediaToCaseMedia(newMedia));
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload media file.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Handle selecting an audio or media file
   const handleSelectMedia = (m: CaseMediaItem) => {
@@ -159,19 +236,13 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
   };
 
   const isAudioOrMedia = (m: CaseMediaItem) => {
-    return (
-      m.mediaType === 'audio' ||
-      m.mediaType === 'recording' ||
-      m.mediaType === 'wiretap' ||
-      m.mediaType === 'video' ||
-      (m.url && /\.(mp3|mp4|m4a|wav|ogg|mpeg|mpg)$/i.test(m.url)) ||
-      /\.(mp3|mp4|m4a|wav|ogg|mpeg|mpg)$/i.test(m.title)
-    );
+    return isAudioMedia(m) || isVideoMedia(m);
   };
 
   const filteredMedia = mediaList.filter((m) => {
-    if (filterType === 'audio' && !isAudioOrMedia(m)) return false;
-    if (filterType === 'image' && isAudioOrMedia(m)) return false;
+    if (filterType === 'audio' && !isAudioMedia(m)) return false;
+    if (filterType === 'document' && !isPdfMedia(m)) return false;
+    if (filterType === 'image' && (isAudioMedia(m) || isPdfMedia(m))) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       return (
@@ -228,9 +299,23 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
             className="bg-black/70 border border-zinc-800 text-xs font-tech text-zinc-300 px-2.5 py-1.5 rounded focus:border-amber-600 focus:outline-none"
           >
             <option value="all">ALL MEDIA ({mediaList.length})</option>
-            <option value="audio">Audio & MP Recordings</option>
+            <option value="audio">Audio &amp; MP3 / MP4 Reels</option>
+            <option value="document">PDF Court Documents</option>
             <option value="image">Photographs / Scans</option>
           </select>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setIsUploadModalOpen(true);
+            }}
+            className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-red-700 text-red-300 hover:bg-red-950/60"
+            title="Upload MP3 audio reel, MP4 surveillance, or PDF court record to this case"
+          >
+            <Upload className="w-3.5 h-3.5 text-red-400" />
+            <span>+ UPLOAD (MP3 / PDF)</span>
+          </button>
         </div>
       </div>
 
@@ -249,9 +334,9 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
           <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
             {filteredMedia.map((m) => {
               const isSelected = selectedMedia?.id === m.id;
-              const hasAudio = isAudioOrMedia(m);
-              const isVideo =
-                m.mediaType === 'video' || (m.url && /\.(mp4|m4v|mpeg|mpg|webm)$/i.test(m.url));
+              const isPdf = isPdfMedia(m);
+              const isVideo = isVideoMedia(m);
+              const hasAudio = isAudioMedia(m) || isVideo;
               const isMp =
                 (m.url && /\.(mp3|mp4|m4a|mpeg|mpg)$/i.test(m.url)) ||
                 /\.(mp3|mp4|m4a|mpeg|mpg)$/i.test(m.title);
@@ -267,15 +352,29 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                   }`}
                 >
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-amber-400 uppercase font-pixel flex items-center">
-                      {isVideo ? (
+                    <span
+                      className={`uppercase font-pixel flex items-center ${
+                        isPdf ? 'text-red-400' : 'text-amber-400'
+                      }`}
+                    >
+                      {isPdf ? (
+                        <FileText className="w-3 h-3 mr-1 text-red-400" />
+                      ) : isVideo ? (
                         <Video className="w-3 h-3 mr-1 text-red-400" />
                       ) : hasAudio ? (
                         <Volume2 className="w-3 h-3 mr-1 text-emerald-400" />
                       ) : (
                         <ImageIcon className="w-3 h-3 mr-1 text-indigo-400" />
                       )}
-                      {isVideo ? 'MP4 VIDEO' : isMp ? 'MP3 AUDIO' : m.mediaType}
+                      {isPdf
+                        ? 'PDF DOCUMENT'
+                        : isVideo
+                        ? 'MP4 VIDEO'
+                        : isMp
+                        ? 'MP3 AUDIO'
+                        : hasAudio
+                        ? 'AUDIO REEL'
+                        : m.mediaType}
                     </span>
                     <span className="px-1.5 py-0.2 bg-zinc-900 border border-zinc-700 text-zinc-400 rounded text-[9px]">
                       {m.caseNumber || caseData.caseNumber}
@@ -291,7 +390,11 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                   </p>
 
                   <div className="flex items-center justify-between pt-1">
-                    {hasAudio ? (
+                    {isPdf ? (
+                      <span className="text-[9px] text-red-400 font-pixel flex items-center">
+                        <FileText className="w-2.5 h-2.5 mr-0.5" /> PDF VIEWER READY
+                      </span>
+                    ) : hasAudio ? (
                       <span className="text-[9px] text-emerald-400 font-pixel flex items-center">
                         <Play className="w-2.5 h-2.5 mr-0.5" /> AUDIO PLAYER READY
                       </span>
@@ -337,8 +440,34 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 </div>
               </div>
 
-              {/* AUDIO & VIDEO PLAYER VIEW */}
-              {isAudioOrMedia(selectedMedia) ? (
+              {/* PDF DOCUMENT VIEWER */}
+              {isPdfMedia(selectedMedia) && selectedMedia.url ? (
+                <div className="space-y-4 font-mono text-xs">
+                  <RetroPdfViewer
+                    key={selectedMedia.id}
+                    url={selectedMedia.url}
+                    title={selectedMedia.title}
+                    caseNumber={selectedMedia.caseNumber || caseData.caseNumber}
+                    classification={selectedMedia.classification}
+                    date={selectedMedia.recoveredAt}
+                    description={selectedMedia.description}
+                    transcript={selectedMedia.transcript}
+                  />
+
+                  <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1">
+                    <span className="font-pixel text-[10px] text-zinc-400 uppercase block">
+                      Document Metadata &amp; Chain of Custody
+                    </span>
+                    <p className="text-zinc-300 font-tech text-xs leading-relaxed">
+                      {selectedMedia.description}
+                    </p>
+                    <div className="text-[10px] font-pixel text-zinc-500 pt-1 border-t border-zinc-900">
+                      SOURCE: {selectedMedia.source}
+                    </div>
+                  </div>
+                </div>
+              ) : isAudioOrMedia(selectedMedia) ? (
+                /* AUDIO & VIDEO PLAYER VIEW */
                 <div className="space-y-4 font-mono text-xs">
                   {/* Robust 90s Law Enforcement Retro Audio Player */}
                   <RetroAudioPlayer
@@ -355,7 +484,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                   <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-pixel text-[10px] text-amber-400 uppercase">
-                        Audio Origin & Provenance Context
+                        Audio Origin &amp; Provenance Context
                       </span>
                       <span className="text-[10px] font-mono text-zinc-500">
                         CASE: {caseData.caseNumber}
@@ -429,7 +558,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
 
                   <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1">
                     <span className="font-pixel text-[10px] text-zinc-400 uppercase block">
-                      Exhibit Metadata & Chain of Custody
+                      Exhibit Metadata &amp; Chain of Custody
                     </span>
                     <p className="text-zinc-300 font-tech text-xs leading-relaxed">
                       {selectedMedia.description}
@@ -512,6 +641,117 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Media Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="retro-window max-w-lg w-full p-6 text-zinc-300 space-y-4 shadow-2xl bg-[#080b0f] border-2 border-red-700">
+            <div className="retro-window-header active flex items-center justify-between p-2 bg-zinc-900 border-b border-zinc-700">
+              <div className="flex items-center space-x-2 text-xs font-pixel text-red-400">
+                <Upload className="w-4 h-4" />
+                <span>UPLOAD CASE MEDIA // {caseData.caseNumber}</span>
+              </div>
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                className="retro-btn text-xs px-2 py-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4 font-mono text-xs">
+              {uploadError && (
+                <div className="p-2.5 bg-red-950/80 border border-red-600 text-red-300 rounded text-xs flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Select File (MP3 Audio, MP4 Video, PDF Document, Image):
+                </label>
+                <input
+                  type="file"
+                  required
+                  accept="audio/*,video/*,image/*,.mp3,.mp4,.m4a,.mpeg,.mpg,.wav,.ogg,.aac,.flac,.webm,.mov,.avi,.pdf"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setUploadFile(f);
+                      if (!uploadTitle) {
+                        setUploadTitle(f.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '));
+                      }
+                    }
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-200 file:mr-3 file:py-1 file:px-3 file:border-0 file:text-xs file:font-mono file:bg-red-950 file:text-red-300 hover:file:bg-red-900"
+                />
+                <span className="text-[9px] text-zinc-500 block">
+                  MP3 audio automatically mounts in the Audio Vault &amp; Player. PDF files render in Document Viewers.
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Media Label / Title:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 911 Audio Tape / Indictment Filing.pdf"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Context &amp; Provenance:
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Source, timestamp, or legal context..."
+                  value={uploadDesc}
+                  onChange={(e) => setUploadDesc(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-amber-400 block uppercase">
+                  Transcript / Text Notes (Optional):
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="[00:00] Speaker: Verbatim transcription..."
+                  value={uploadTranscript}
+                  onChange={(e) => setUploadTranscript(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="retro-btn text-xs px-3 py-1.5"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading || !uploadFile}
+                  className="retro-btn retro-btn-red text-xs px-4 py-1.5 flex items-center space-x-1.5 disabled:opacity-50"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploading ? 'UPLOADING...' : 'ARCHIVE MEDIA'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

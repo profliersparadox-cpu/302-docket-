@@ -320,7 +320,7 @@ export const CourtroomSim: React.FC<CourtroomSimProps> = ({
     setIsJudgeEvaluating(true);
 
     setTimeout(() => {
-      soundEngine.playBootBeep();
+      soundEngine.playGavelStrike();
       setIsJudgeEvaluating(false);
 
       // Strike gavel visual

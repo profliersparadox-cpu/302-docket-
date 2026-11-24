@@ -43,6 +43,10 @@ import { CaseCourtroomView } from './case/CaseCourtroomView.tsx';
 import { CasePersonsOfInterestView } from './case/CasePersonsOfInterestView.tsx';
 import { CaseColdCaseTheoryLab } from './case/CaseColdCaseTheoryLab.tsx';
 import { CaseMediaVaultView } from './case/CaseMediaVaultView.tsx';
+import { RetroPrintFeedModal } from './common/RetroPrintFeedModal.tsx';
+import { DossierCrossRefText, CrossRefHit } from './case/DossierCrossRefText.tsx';
+import { ChapterAuditChallenge } from './case/ChapterAuditChallenge.tsx';
+import { X, BookOpen } from 'lucide-react';
 
 interface CaseDetailProps {
   caseSlug: string;
@@ -79,6 +83,16 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   const [showInteractiveSuite, setShowInteractiveSuite] = useState(false);
   const [interactiveSuiteView, setInteractiveSuiteView] = useState<'pinboard' | 'timeline' | 'documents' | 'interviews' | 'exercise' | 'media' | 'radar'>('pinboard');
   const [visitedStages, setVisitedStages] = useState<Set<number>>(() => new Set([0]));
+  const [verifiedAudits, setVerifiedAudits] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem(`docket_audits_${caseSlug}`);
+      return saved ? new Set<number>(JSON.parse(saved)) : new Set<number>();
+    } catch {
+      return new Set<number>();
+    }
+  });
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [activeCrossRef, setActiveCrossRef] = useState<CrossRefHit | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,6 +109,12 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
           setIsLoading(false);
           markChapterRead(data.id, 0);
           setVisitedStages(new Set([0]));
+          try {
+            const saved = localStorage.getItem(`docket_audits_${caseSlug}`);
+            setVerifiedAudits(saved ? new Set<number>(JSON.parse(saved)) : new Set<number>());
+          } catch {
+            setVerifiedAudits(new Set<number>());
+          }
         }
       })
       .catch((err) => {
@@ -108,13 +128,27 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   }, [caseSlug]);
 
   const handleChapterChange = (index: number) => {
-    soundEngine.playKeyClick();
+    if (index === 6 || index === 7) {
+      soundEngine.playUnsealChord();
+    } else {
+      soundEngine.playKeyClick();
+    }
     setActiveChapter(index);
     setVisitedStages((prev) => new Set(prev).add(index));
     if (caseData) {
       markChapterRead(caseData.id, index);
     }
     window.scrollTo({ top: 280, behavior: 'smooth' });
+  };
+
+  const handleVerifyChapter = (chapterIndex: number) => {
+    setVerifiedAudits((prev) => {
+      const next = new Set(prev).add(chapterIndex);
+      try {
+        localStorage.setItem(`docket_audits_${caseSlug}`, JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
   };
 
   const handleShare = () => {
@@ -218,10 +252,10 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             <button
               onClick={() => {
                 soundEngine.playKeyClick();
-                window.print();
+                setIsPrintModalOpen(true);
               }}
-              className="retro-btn text-xs font-tech flex items-center"
-              title="Print dossier summary"
+              className="retro-btn text-xs font-tech flex items-center border-zinc-500 text-zinc-100 hover:border-amber-500"
+              title="Open retro physical document feed printer"
             >
               <Printer className="w-3.5 h-3.5 mr-1.5" />
               <span className="hidden sm:inline">PRINT</span>
@@ -446,17 +480,111 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                   GATHERING EVIDENCE & TESTIMONIAL AUDIT FOR PROSECUTION RECORD
                 </span>
               </div>
-              <div className="flex items-center space-x-3 text-xs font-tech">
-                <span className="text-zinc-400">STAGES AUDITED:</span>
-                <span className="font-mono text-phosphor font-bold">{visitedStages.size} / 9</span>
-                <div className="w-24 h-1.5 bg-black border border-zinc-700">
-                  <div
-                    className="h-full bg-red-500 transition-all duration-300"
-                    style={{ width: `${(visitedStages.size / 9) * 100}%` }}
-                  />
+              <div className="flex flex-wrap items-center gap-4 text-xs font-tech">
+                <div className="flex items-center space-x-2">
+                  <span className="text-zinc-400">READ:</span>
+                  <span className="font-mono text-zinc-200 font-bold">{visitedStages.size}/9</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-zinc-400">LEGAL AUDITS VERIFIED:</span>
+                  <span className="font-mono text-phosphor font-bold">{verifiedAudits.size} / 9</span>
+                  <div className="w-24 h-1.5 bg-black border border-zinc-700">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${(verifiedAudits.size / 9) * 100}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Interactive Cross-Reference Hint Strip */}
+            <div className="px-3 py-1.5 bg-[#0a0d12] border border-zinc-800/80 rounded flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-400">
+              <span>
+                TIP: Dotted highlights (<span className="border-b border-dotted border-emerald-500 text-emerald-300">Exhibits</span>,{' '}
+                <span className="border-b border-dotted border-red-500 text-red-300">Subjects</span>,{' '}
+                <span className="border-b border-dotted border-amber-500 text-amber-300">Legal Doctrines</span>) are live cross-references. Click any to inspect without leaving your docket.
+              </span>
+              {activeCrossRef && (
+                <button
+                  type="button"
+                  onClick={() => setActiveCrossRef(null)}
+                  className="text-amber-400 hover:text-amber-200 text-[10px]"
+                >
+                  CLEAR INSPECTOR
+                </button>
+              )}
+            </div>
+
+            {/* Inline Cross-Reference Quick-Inspect Drawer */}
+            {activeCrossRef && (
+              <div className="p-4 bg-[#090d14] border-2 border-amber-600/80 rounded shadow-2xl space-y-2 dossier-chapter-enter">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <BookOpen className="w-4 h-4 text-amber-400" />
+                    <span className="font-pixel text-[10px] text-amber-400 uppercase">
+                      CROSS-REFERENCE INSPECTOR //{' '}
+                      {activeCrossRef.kind === 'evidence'
+                        ? `EXHIBIT ${activeCrossRef.item.exhibitNumber}`
+                        : activeCrossRef.kind === 'poi'
+                        ? `SUBJECT: ${activeCrossRef.item.status.toUpperCase()}`
+                        : `JUDICIAL DOCTRINE`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playKeyClick();
+                      setActiveCrossRef(null);
+                    }}
+                    className="text-zinc-400 hover:text-zinc-100 p-0.5"
+                    aria-label="Close cross-reference inspector"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {activeCrossRef.kind === 'evidence' && (
+                  <div className="space-y-1.5 text-xs font-tech">
+                    <div className="font-bold text-emerald-300 text-sm">
+                      {activeCrossRef.item.title}
+                    </div>
+                    <p className="text-zinc-300 leading-relaxed">{activeCrossRef.item.description}</p>
+                    <div className="text-[11px] text-zinc-400">
+                      <strong className="text-zinc-200">Forensic Significance:</strong>{' '}
+                      {activeCrossRef.item.significance}
+                    </div>
+                  </div>
+                )}
+
+                {activeCrossRef.kind === 'poi' && (
+                  <div className="space-y-1.5 text-xs font-tech">
+                    <div className="font-bold text-red-300 text-sm">
+                      {activeCrossRef.item.name} &mdash; {activeCrossRef.item.role}
+                    </div>
+                    <p className="text-zinc-300 leading-relaxed">
+                      {activeCrossRef.item.verifiedFindings || activeCrossRef.item.background}
+                    </p>
+                    <div className="text-[11px] text-zinc-400">
+                      <strong className="text-zinc-200">Legal Disposition:</strong>{' '}
+                      {activeCrossRef.item.outcome}
+                    </div>
+                  </div>
+                )}
+
+                {activeCrossRef.kind === 'doctrine' && (
+                  <div className="space-y-1.5 text-xs font-tech">
+                    <div className="font-bold text-amber-300 text-sm">
+                      {activeCrossRef.item.term} &mdash;{' '}
+                      <span className="font-mono text-xs text-zinc-400">
+                        {activeCrossRef.item.citation}
+                      </span>
+                    </div>
+                    <p className="text-zinc-200 leading-relaxed">{activeCrossRef.item.summary}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Horizontal Chapter Navigation Bar */}
             <div className="retro-window p-1 overflow-x-auto">
@@ -464,6 +592,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             {CHAPTERS.map((ch) => {
               const Icon = ch.icon;
               const isActive = activeChapter === ch.index;
+              const isAudited = verifiedAudits.has(ch.index);
 
               return (
                 <button
@@ -477,6 +606,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                 >
                   <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-red-400' : 'text-zinc-600'}`} />
                   <span>{ch.title}</span>
+                  {isAudited && <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />}
                 </button>
               );
             })}
@@ -506,7 +636,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     Case Background & Setting
                   </h4>
                   <p className="text-xs font-tech text-zinc-300 leading-relaxed mb-3">
-                    {caseData.overview.background}
+                    <DossierCrossRefText
+                      text={caseData.overview.background}
+                      caseData={caseData}
+                      onInspectRef={setActiveCrossRef}
+                    />
                   </p>
                   <div className="pt-2 border-t border-[#21262d] text-xs font-tech text-zinc-400 space-y-1">
                     <div>
@@ -524,7 +658,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     Victim Profile & Forensic Scope
                   </h4>
                   <p className="text-xs font-tech text-zinc-300 leading-relaxed mb-3">
-                    {caseData.overview.victimInfo}
+                    <DossierCrossRefText
+                      text={caseData.overview.victimInfo}
+                      caseData={caseData}
+                      onInspectRef={setActiveCrossRef}
+                    />
                   </p>
                   <div className="p-2.5 bg-black/60 border border-[#21262d] text-[11px] font-tech text-zinc-400">
                     <span className="font-bold text-emerald-400 block mb-0.5">
@@ -540,7 +678,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                   Executive Dossier Synopsis
                 </h3>
                 <p className="text-xs text-zinc-300 leading-relaxed font-tech whitespace-pre-line">
-                  {caseData.summary}
+                  <DossierCrossRefText
+                    text={caseData.summary}
+                    caseData={caseData}
+                    onInspectRef={setActiveCrossRef}
+                  />
                 </p>
               </div>
             </div>
@@ -561,7 +703,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                   Documented Factual Timeline
                 </h3>
                 <p className="text-xs text-zinc-300 leading-relaxed font-tech whitespace-pre-line">
-                  {caseData.incident.narrative}
+                  <DossierCrossRefText
+                    text={caseData.incident.narrative}
+                    caseData={caseData}
+                    onInspectRef={setActiveCrossRef}
+                  />
                 </p>
               </div>
 
@@ -588,7 +734,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     Investigative Developments & Field Work
                   </h4>
                   <p className="text-xs font-tech text-zinc-300 leading-relaxed whitespace-pre-line">
-                    {caseData.investigation.narrative}
+                    <DossierCrossRefText
+                      text={caseData.investigation.narrative}
+                      caseData={caseData}
+                      onInspectRef={setActiveCrossRef}
+                    />
                   </p>
                 </div>
 
@@ -598,7 +748,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       FD-302 Interview Memoranda Summary
                     </h4>
                     <p className="text-xs font-tech text-zinc-400 leading-relaxed">
-                      {caseData.investigation.interviewRecordsSummary}
+                      <DossierCrossRefText
+                        text={caseData.investigation.interviewRecordsSummary}
+                        caseData={caseData}
+                        onInspectRef={setActiveCrossRef}
+                      />
                     </p>
                   </div>
 
@@ -607,7 +761,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       Procedural & Evidence Notes
                     </h4>
                     <p className="text-xs font-tech text-zinc-400 leading-relaxed">
-                      {caseData.investigation.procedureNotes}
+                      <DossierCrossRefText
+                        text={caseData.investigation.procedureNotes}
+                        caseData={caseData}
+                        onInspectRef={setActiveCrossRef}
+                      />
                     </p>
                   </div>
                 </div>
@@ -684,7 +842,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                   Turning Point Narrative
                 </h3>
                 <p className="text-xs text-zinc-300 leading-relaxed font-tech whitespace-pre-line">
-                  {caseData.breakthrough.narrative}
+                  <DossierCrossRefText
+                    text={caseData.breakthrough.narrative}
+                    caseData={caseData}
+                    onInspectRef={setActiveCrossRef}
+                  />
                 </p>
               </div>
 
@@ -754,7 +916,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                   <span className="font-pixel text-[9px] text-zinc-500 uppercase block mb-1">
                     Appeals & Subsequent Rulings:
                   </span>
-                  {caseData.verdict.appealsAndRulings}
+                  <DossierCrossRefText
+                    text={caseData.verdict.appealsAndRulings}
+                    caseData={caseData}
+                    onInspectRef={setActiveCrossRef}
+                  />
                 </div>
 
                 {caseData.verdict.unresolvedLegalQuestions && (
@@ -825,6 +991,15 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               </div>
             </div>
           )}
+
+          {/* Active Chapter Legal Reasoning & Evidentiary Audit */}
+          <ChapterAuditChallenge
+            key={`${caseData.slug}-audit-${activeChapter}`}
+            caseData={caseData}
+            chapterIndex={activeChapter}
+            isVerified={verifiedAudits.has(activeChapter)}
+            onVerifyChapter={handleVerifyChapter}
+          />
 
           {/* Bottom Chapter Pagination Controls */}
           <div className="mt-8 pt-4 border-t border-[#2d333b] flex items-center justify-between">
@@ -935,6 +1110,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
           </>
         )}
       </div>
+
+      {/* Minimalist Retro Tractor-Feed Physical Print Dialog */}
+      <RetroPrintFeedModal
+        caseData={caseData}
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
     </div>
   );
 };

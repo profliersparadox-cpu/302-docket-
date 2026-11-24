@@ -19,11 +19,19 @@ import {
   X,
   Save,
   Tag,
+  Upload,
 } from 'lucide-react';
-import { InterviewRecord, TranscriptLine } from '../../types.ts';
+import { InterviewRecord, TranscriptLine, MediaItem } from '../../types.ts';
 import { archiveInterviewRecords } from '../../data/archiveVaultData.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
+import {
+  fetchAllMedia,
+  uploadMediaFile,
+  isAudioMedia,
+  isVideoMedia,
+  MEDIA_UPDATED_EVENT,
+} from '../../utils/mediaVault.ts';
 
 interface InterviewRecordVaultProps {
   onOpenCase?: (slug: string) => void;
@@ -40,11 +48,72 @@ const CASE_FILTERS = [
   { id: '007', label: '#007 EPSTEIN' },
 ];
 
+const CASE_OPTIONS = [
+  { slug: 'jonbenet-ramsey-boulder', number: 'CASE 001', label: 'CASE 001 — JonBenét Ramsey' },
+  { slug: 'golden-state-killer-deangelo', number: 'CASE 002', label: 'CASE 002 — Golden State Killer' },
+  { slug: 'gabby-petito-brian-laundrie', number: 'CASE 003', label: 'CASE 003 — Gabby Petito' },
+  { slug: 'lindbergh-kidnapping-hauptmann', number: 'CASE 004', label: 'CASE 004 — Lindbergh Kidnapping' },
+  { slug: 'jacob-wetterling-abduction', number: 'CASE 005', label: 'CASE 005 — Jacob Wetterling' },
+  { slug: 'larry-nassar-msu-usag', number: 'CASE 006', label: 'CASE 006 — Larry Nassar & USAG' },
+  { slug: 'epstein-maxwell-trafficking', number: 'CASE 007', label: 'CASE 007 — Epstein & Maxwell' },
+  { slug: 'general-archive', number: 'GENERAL', label: 'GENERAL ARCHIVE EXHIBIT' },
+];
+
+const parseTranscriptToLines = (text?: string): TranscriptLine[] => {
+  if (!text || !text.trim()) return [];
+  const rawLines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  return rawLines.map((line, i) => {
+    const match = line.match(/^\[([^\]]+)\]\s*([^:]+):\s*(.+)$/);
+    if (match) {
+      return {
+        timestamp: match[1].trim(),
+        speaker: match[2].trim().toUpperCase(),
+        speakerRole: 'Recorded Audio Participant',
+        text: match[3].trim(),
+        isDirectQuote: true,
+      };
+    }
+    const colonMatch = line.match(/^([A-Za-z0-9 _.-]{2,25}):\s*(.+)$/);
+    if (colonMatch) {
+      return {
+        timestamp: `00:${(i * 15).toString().padStart(2, '0')}`,
+        speaker: colonMatch[1].trim().toUpperCase(),
+        speakerRole: 'Recorded Audio Participant',
+        text: colonMatch[2].trim(),
+        isDirectQuote: true,
+      };
+    }
+    return {
+      timestamp: `00:${(i * 15).toString().padStart(2, '0')}`,
+      speaker: 'RECORDING TRANSCRIPT',
+      speakerRole: 'Verbatim Audio Log',
+      text: line,
+      isDirectQuote: true,
+    };
+  });
+};
+
 export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOpenCase }) => {
+  const [uploadedAudioRecords, setUploadedAudioRecords] = useState<InterviewRecord[]>([]);
+  const [uploadedAudioUrls, setUploadedAudioUrls] = useState<Record<string, string>>({});
   const [selectedRecordId, setSelectedRecordId] = useState<string>(archiveInterviewRecords[0].id);
   const [isPlayingTape, setIsPlayingTape] = useState(false);
   const [filterQuoteType, setFilterQuoteType] = useState<'all' | 'quotes_only' | 'summaries_only'>('all');
   const [activeCaseFilter, setActiveCaseFilter] = useState<string>('all');
+
+  // Upload MP3 modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadCaseSlug, setUploadCaseSlug] = useState('jonbenet-ramsey-boulder');
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDesc, setUploadDesc] = useState('');
+  const [uploadTranscript, setUploadTranscript] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Custom transcript entries added by investigator
   const [customTranscripts, setCustomTranscripts] = useState<Record<string, TranscriptLine[]>>(() => {
@@ -64,8 +133,59 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
   const [newText, setNewText] = useState('');
   const [newIsQuote, setNewIsQuote] = useState(true);
 
-  const activeRecord =
-    archiveInterviewRecords.find((r) => r.id === selectedRecordId) || archiveInterviewRecords[0];
+  const loadUploadedAudio = async () => {
+    try {
+      const allMedia: MediaItem[] = await fetchAllMedia();
+      const audioMedia = allMedia.filter((m) => isAudioMedia(m) || isVideoMedia(m));
+      const urlMap: Record<string, string> = {};
+      const recs: InterviewRecord[] = audioMedia.map((m) => {
+        const recId = `audio-${m.id}`;
+        urlMap[recId] = m.url;
+        const lines = parseTranscriptToLines(m.transcript);
+        if (lines.length === 0) {
+          lines.push({
+            timestamp: '00:00:00',
+            speaker: 'ARCHIVE LOG',
+            speakerRole: 'Audio Exhibit Metadata',
+            text:
+              m.description ||
+              `Uploaded MP3/audio recording (${m.originalName}). Click "+ ADD TRANSCRIPT" above to transcribe spoken segments.`,
+            isDirectQuote: false,
+          });
+        }
+        return {
+          id: recId,
+          caseSlug: m.caseSlug || 'general-archive',
+          caseNumber: m.caseNumber || 'CASE-AUDIO',
+          title: m.title || m.originalName,
+          interviewee: m.title || m.originalName,
+          interviewer: 'Uploaded Case Audio Exhibit',
+          date: m.uploadedAt.split('T')[0],
+          location: `File: ${m.originalName} (${Math.round(m.size / 1024)} KB)`,
+          recordingMedium: 'Magnetic Reel Audio',
+          classification: 'Declassified FD-302',
+          summary: m.description || `Uploaded audio exhibit (${m.originalName})`,
+          transcripts: lines,
+          sourceCitation: `Uploaded Archive Media • ${m.originalName}`,
+        };
+      });
+      setUploadedAudioUrls(urlMap);
+      setUploadedAudioRecords(recs);
+    } catch (err) {
+      console.warn('Failed to fetch uploaded audio for vault:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadUploadedAudio();
+    const handleUpdate = () => loadUploadedAudio();
+    window.addEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+  }, []);
+
+  const allRecords = [...uploadedAudioRecords, ...archiveInterviewRecords];
+  const activeRecord = allRecords.find((r) => r.id === selectedRecordId) || allRecords[0];
+  const activeAudioUrl = uploadedAudioUrls[activeRecord.id] || '';
 
   const togglePlayTape = () => {
     soundEngine.playKeyClick();
@@ -76,6 +196,39 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
     soundEngine.playFileAccess();
     setSelectedRecordId(id);
     setIsPlayingTape(false);
+  };
+
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      soundEngine.playKeyClick();
+      const matchingCase = CASE_OPTIONS.find((c) => c.slug === uploadCaseSlug);
+      const saved = await uploadMediaFile(uploadFile, {
+        caseSlug: uploadCaseSlug,
+        caseNumber: matchingCase?.number,
+        title: uploadTitle.trim() || uploadFile.name,
+        description: uploadDesc.trim(),
+        transcript: uploadTranscript.trim(),
+      });
+
+      soundEngine.playBootBeep();
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadTitle('');
+      setUploadDesc('');
+      setUploadTranscript('');
+      await loadUploadedAudio();
+      setSelectedRecordId(`audio-${saved.id}`);
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload MP3 audio file.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleAddTranscriptLine = (e: React.FormEvent) => {
@@ -119,7 +272,7 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
     return true;
   });
 
-  const filteredRecords = archiveInterviewRecords.filter((rec) => {
+  const filteredRecords = allRecords.filter((rec) => {
     if (activeCaseFilter === 'all') return true;
     return rec.caseNumber.includes(activeCaseFilter);
   });
@@ -134,8 +287,23 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
             <span className="font-bold">FD-302 INTERVIEW VAULT</span>
           </div>
           <span className="text-[10px] font-mono text-zinc-500">
-            {archiveInterviewRecords.length} CASES INDEXED
+            {allRecords.length} REELS
           </span>
+        </div>
+
+        {/* Upload Audio Button */}
+        <div className="p-2 border-b border-[#262c36] bg-[#0e1218]">
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setIsUploadModalOpen(true);
+            }}
+            className="w-full py-1.5 px-3 bg-amber-950/80 hover:bg-amber-900 border border-amber-600 text-amber-200 text-xs font-mono font-bold rounded flex items-center justify-center space-x-1.5 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5 text-amber-400" />
+            <span>+ UPLOAD AUDIO REEL (MP3)</span>
+          </button>
         </div>
 
         {/* Vintage Cassette Tape Animation Deck */}
@@ -144,7 +312,9 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
             {/* Cassette label */}
             <div className="bg-amber-100/90 text-zinc-900 font-mono text-[9px] px-2 py-0.5 rounded font-bold uppercase truncate border border-amber-300 flex items-center justify-between">
               <span className="truncate">TAPE REEL // {activeRecord.caseNumber}</span>
-              <span className="text-[8px] text-zinc-700">{activeRecord.recordingMedium.split(' ')[0]}</span>
+              <span className="text-[8px] text-zinc-700">
+                {activeAudioUrl ? 'MP3 FILE' : activeRecord.recordingMedium.split(' ')[0]}
+              </span>
             </div>
 
             {/* Tape spools */}
@@ -180,26 +350,11 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
             </div>
 
             <div className="flex items-center justify-between text-[8px] font-mono text-zinc-500">
-              <span>MAGNETIC TAPE BIAS: NORMAL</span>
+              <span>{activeAudioUrl ? 'DIRECT MP3 STREAM' : 'MAGNETIC TAPE BIAS: NORMAL'}</span>
               <span className={isPlayingTape ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
-                {isPlayingTape ? 'ROLLING [PLAY]' : 'PAUSED'}
+                {isPlayingTape ? 'ROLLING [PLAY]' : 'READY'}
               </span>
             </div>
-          </div>
-
-          {/* Tape Controls */}
-          <div className="flex items-center justify-center space-x-2 mt-2.5 w-full">
-            <button
-              onClick={togglePlayTape}
-              className={`flex-1 py-1.5 px-3 border font-mono text-xs rounded flex items-center justify-center space-x-1.5 transition-colors ${
-                isPlayingTape
-                  ? 'bg-amber-950/80 border-amber-600 text-amber-300 font-bold'
-                  : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-200'
-              }`}
-            >
-              {isPlayingTape ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5 text-emerald-400" />}
-              <span>{isPlayingTape ? 'PAUSE PLAYBACK' : 'PLAY REEL'}</span>
-            </button>
           </div>
         </div>
 
@@ -224,6 +379,7 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
         <div className="flex-1 overflow-y-auto divide-y divide-zinc-900">
           {filteredRecords.map((rec) => {
             const isSelected = rec.id === activeRecord.id;
+            const isUploaded = Boolean(uploadedAudioUrls[rec.id]);
             return (
               <button
                 key={rec.id}
@@ -238,7 +394,13 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
                   <span className="px-1.5 py-0.2 bg-red-950/80 text-red-300 border border-red-800 rounded font-bold">
                     {rec.caseNumber.split('-')[1] ? `CASE ${rec.caseNumber.split('-')[1]}` : rec.caseNumber}
                   </span>
-                  <span className="text-amber-400 font-bold">{rec.recordingMedium.split(' ')[0]}</span>
+                  {isUploaded ? (
+                    <span className="px-1.5 py-0.2 bg-emerald-950 border border-emerald-700 text-emerald-300 rounded font-bold text-[9px]">
+                      MP3 UPLOAD
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 font-bold">{rec.recordingMedium.split(' ')[0]}</span>
+                  )}
                 </div>
                 <div className="text-xs font-bold text-zinc-200 line-clamp-1 font-mono">
                   {rec.interviewee}
@@ -334,6 +496,7 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
         <div className="p-3 bg-black/70 border-b border-[#262c36]">
           <RetroAudioPlayer
             key={activeRecord.id}
+            url={activeAudioUrl}
             title={activeRecord.title}
             caseNumber={activeRecord.caseNumber}
             transcript={allTranscripts.map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join('\n')}
@@ -546,6 +709,131 @@ export const InterviewRecordVault: React.FC<InterviewRecordVaultProps> = ({ onOp
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>SAVE TO REEL</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Upload MP3 / Audio Reel */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12161f] border-2 border-amber-500/80 rounded-lg max-w-md w-full p-5 shadow-2xl font-mono text-xs text-zinc-200">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+              <div className="flex items-center space-x-2 text-amber-400 font-bold">
+                <Upload className="w-4 h-4 text-amber-400" />
+                <span>UPLOAD AUDIO REEL TO INTERVIEW VAULT</span>
+              </div>
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-3">
+              {uploadError && (
+                <div className="p-2 bg-red-950/80 border border-red-600 text-red-300 rounded flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Select Audio File (MP3, WAV, M4A, MP4) *
+                </label>
+                <input
+                  type="file"
+                  required
+                  accept="audio/*,video/*,.mp3,.mp4,.m4a,.wav,.ogg,.aac,.flac,.mpeg,.mpg"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setUploadFile(f);
+                      if (!uploadTitle) {
+                        setUploadTitle(f.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '));
+                      }
+                    }
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-200 file:mr-3 file:py-1 file:px-3 file:border-0 file:text-xs file:font-mono file:bg-amber-950 file:text-amber-300"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Assign Case Docket *
+                </label>
+                <select
+                  value={uploadCaseSlug}
+                  onChange={(e) => setUploadCaseSlug(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                >
+                  {CASE_OPTIONS.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Recording Title / Witness *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  placeholder="e.g. 911 Emergency Call / Witness Deposition"
+                  className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-zinc-400 uppercase mb-1">
+                  Context &amp; Provenance
+                </label>
+                <input
+                  type="text"
+                  value={uploadDesc}
+                  onChange={(e) => setUploadDesc(e.target.value)}
+                  placeholder="Admitted recording exhibit source..."
+                  className="w-full bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded text-zinc-100 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-amber-400 uppercase mb-1">
+                  Audio Transcript Lines (Optional)
+                </label>
+                <textarea
+                  rows={4}
+                  value={uploadTranscript}
+                  onChange={(e) => setUploadTranscript(e.target.value)}
+                  placeholder="[00:00] DISPATCH: State your emergency...&#10;[00:12] WITNESS: Please send police..."
+                  className="w-full bg-zinc-950 border border-zinc-700 p-2 rounded text-zinc-200 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading || !uploadFile}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-black font-bold rounded flex items-center space-x-1.5 disabled:opacity-50"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploading ? 'UPLOADING...' : 'MOUNT AUDIO REEL'}</span>
                 </button>
               </div>
             </form>

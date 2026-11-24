@@ -19,9 +19,12 @@ import {
   Shield,
   Layers,
   Video,
+  Eye,
 } from 'lucide-react';
 import { MediaItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { RetroPdfViewer } from '../common/RetroPdfViewer.tsx';
+import { isPdfMedia, isAudioMedia, isVideoMedia, MEDIA_UPDATED_EVENT } from '../../utils/mediaVault.ts';
 
 const CASE_OPTIONS = [
   { slug: 'jonbenet-ramsey-boulder', number: 'CASE 001', label: 'CASE 001 — JonBenét Ramsey' },
@@ -59,8 +62,9 @@ export const MediaLibrary: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  // Expanded transcripts in cards
+  // Expanded transcripts in cards & PDF modal preview
   const [expandedTranscripts, setExpandedTranscripts] = useState<Record<string, boolean>>({});
+  const [previewPdfItem, setPreviewPdfItem] = useState<MediaItem | null>(null);
 
   const fetchMedia = async () => {
     try {
@@ -130,6 +134,7 @@ export const MediaLibrary: React.FC = () => {
       setUploadDescription('');
       setUploadTranscript('');
       await fetchMedia();
+      window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT));
     } catch (err: any) {
       setError(err.message || 'Error uploading media file.');
     } finally {
@@ -174,6 +179,7 @@ export const MediaLibrary: React.FC = () => {
       soundEngine.playKeyClick();
       setSuccessMsg('Media transcript and case assignment updated.');
       setTimeout(() => setSuccessMsg(null), 3000);
+      window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT));
     } catch (err: any) {
       setError(err.message || 'Failed to update metadata.');
     } finally {
@@ -189,6 +195,7 @@ export const MediaLibrary: React.FC = () => {
       if (res.ok) {
         setMediaList((prev) => prev.filter((m) => m.id !== id));
         soundEngine.playKeyClick();
+        window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT));
       }
     } catch (err: any) {
       setError('Failed to delete media asset: ' + err.message);
@@ -330,22 +337,17 @@ export const MediaLibrary: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMedia.map((item) => {
-            const isAudio =
-              item.mimeType.startsWith('audio/') ||
-              /\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(item.originalName) ||
-              /\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(item.filename);
-
-            const isVideo =
-              item.mimeType.startsWith('video/') ||
-              /\.(mp4|m4v|mpeg|mpg|webm|mov|avi)$/i.test(item.originalName) ||
-              /\.(mp4|m4v|mpeg|mpg|webm|mov|avi)$/i.test(item.filename);
-
+            const isAudio = isAudioMedia(item);
+            const isVideo = isVideoMedia(item);
+            const isPdf = isPdfMedia(item);
             const isImage = item.mimeType.startsWith('image/');
             const sizeKb = (item.size / 1024).toFixed(1);
             const caseInfo = CASE_OPTIONS.find((c) => c.slug === item.caseSlug);
             const isTranscriptOpen = !!expandedTranscripts[item.id];
 
-            const formatLabel = isVideo
+            const formatLabel = isPdf
+              ? 'PDF COURT RECORD'
+              : isVideo
               ? 'MP4 VIDEO / AUDIO'
               : /\.(mp3)$/i.test(item.originalName) || item.mimeType === 'audio/mpeg' || item.mimeType === 'audio/mp3'
               ? 'MP3 AUDIO REEL'
@@ -365,7 +367,11 @@ export const MediaLibrary: React.FC = () => {
                   <span className="px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-800 rounded font-bold">
                     {item.caseNumber || caseInfo?.number || 'GENERAL'}
                   </span>
-                  <span className="text-zinc-400 font-pixel uppercase">
+                  <span
+                    className={`font-pixel uppercase ${
+                      isPdf ? 'text-red-400' : 'text-zinc-400'
+                    }`}
+                  >
                     {formatLabel}
                   </span>
                 </div>
@@ -396,6 +402,24 @@ export const MediaLibrary: React.FC = () => {
                       <audio controls className="w-full h-8 brightness-90 contrast-125" src={item.url}>
                         Your browser does not support audio playback.
                       </audio>
+                    </div>
+                  ) : isPdf ? (
+                    <div className="flex flex-col items-center justify-center py-3 text-center space-y-2">
+                      <FileText className="w-10 h-10 text-red-400" />
+                      <span className="text-[10px] font-mono text-zinc-300 truncate max-w-[200px]">
+                        {item.originalName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundEngine.playFileAccess();
+                          setPreviewPdfItem(item);
+                        }}
+                        className="px-3 py-1 bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-[10px] font-mono font-bold rounded flex items-center space-x-1 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>OPEN PDF VIEWER</span>
+                      </button>
                     </div>
                   ) : isImage ? (
                     <div className="w-full h-36 flex items-center justify-center overflow-hidden rounded">
@@ -706,6 +730,34 @@ export const MediaLibrary: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: PDF Preview */}
+      {previewPdfItem && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="max-w-4xl w-full bg-[#090c10] border-2 border-red-700 rounded-lg p-4 shadow-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <div className="flex items-center space-x-2 text-xs font-pixel text-red-400">
+                <FileText className="w-4 h-4" />
+                <span>PDF DOCUMENT PREVIEW // {previewPdfItem.title || previewPdfItem.originalName}</span>
+              </div>
+              <button
+                onClick={() => setPreviewPdfItem(null)}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <RetroPdfViewer
+              url={previewPdfItem.url}
+              title={previewPdfItem.title || previewPdfItem.originalName}
+              caseNumber={previewPdfItem.caseNumber}
+              description={previewPdfItem.description}
+              transcript={previewPdfItem.transcript}
+              sizeBytes={previewPdfItem.size}
+            />
           </div>
         </div>
       )}

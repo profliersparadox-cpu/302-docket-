@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Fingerprint,
   Pin,
@@ -14,10 +14,23 @@ import {
   Plus,
   Volume2,
   Radio,
+  Upload,
+  Download,
+  AlertCircle,
 } from 'lucide-react';
 import { CaseFile, EvidenceItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
+import { RetroPdfViewer } from '../common/RetroPdfViewer.tsx';
+import {
+  fetchAllMedia,
+  uploadMediaFile,
+  isAudioMedia,
+  isPdfMedia,
+  isVideoMedia,
+  convertMediaToEvidence,
+  MEDIA_UPDATED_EVENT,
+} from '../../utils/mediaVault.ts';
 
 interface CaseEvidenceViewProps {
   caseData: CaseFile;
@@ -32,6 +45,72 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
   const [addedToast, setAddedToast] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Uploaded media state
+  const [uploadedExhibits, setUploadedExhibits] = useState<EvidenceItem[]>([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDesc, setUploadDesc] = useState('');
+  const [uploadTranscript, setUploadTranscript] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Load uploaded media specifically matching this case
+  const loadCaseUploadedMedia = async () => {
+    try {
+      const items = await fetchAllMedia(caseData.slug);
+      const converted = items.map((m, idx) => convertMediaToEvidence(m, idx));
+      setUploadedExhibits(converted);
+    } catch (err) {
+      console.warn('Error loading case media exhibits:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadCaseUploadedMedia();
+
+    const handleUpdate = () => {
+      loadCaseUploadedMedia();
+    };
+    window.addEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+  }, [caseData.slug]);
+
+  // Handle uploading new exhibit directly from Evidence Room
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      soundEngine.playKeyClick();
+      await uploadMediaFile(uploadFile, {
+        caseSlug: caseData.slug,
+        caseNumber: caseData.caseNumber,
+        title: uploadTitle.trim() || uploadFile.name,
+        description: uploadDesc.trim(),
+        transcript: uploadTranscript.trim(),
+      });
+
+      soundEngine.playBootBeep();
+      setAddedToast(uploadTitle.trim() || uploadFile.name);
+      setTimeout(() => setAddedToast(null), 3000);
+
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadTitle('');
+      setUploadDesc('');
+      setUploadTranscript('');
+      await loadCaseUploadedMedia();
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload exhibit file.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Handle adding card to the user's custom evidence board
   const handleAddToEvidenceBoard = (ev: EvidenceItem, e?: React.MouseEvent) => {
@@ -74,7 +153,10 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
     }, 2800);
   };
 
-  const filteredEvidence = caseData.evidence.filter((ev) => {
+  // Combined evidence: uploaded items + canonical case evidence
+  const allEvidence = [...uploadedExhibits, ...caseData.evidence];
+
+  const filteredEvidence = allEvidence.filter((ev) => {
     if (typeFilter !== 'all' && ev.type !== typeFilter) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -127,7 +209,7 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
                 FORENSIC EVIDENCE REPOSITORY
               </span>
               <span className="retro-stamp text-[8px] py-0 px-1.5">
-                {caseData.evidence.length} EXHIBITS LOGGED
+                {allEvidence.length} EXHIBITS LOGGED
               </span>
             </div>
             <h3 className="text-base font-bold font-editorial text-zinc-100">
@@ -136,7 +218,7 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters & Actions */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -154,13 +236,26 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
             onChange={(e) => setTypeFilter(e.target.value)}
             className="bg-black/70 border border-zinc-800 text-xs font-tech text-zinc-300 px-2.5 py-1.5 rounded focus:border-red-600 focus:outline-none"
           >
-            <option value="all">ALL TYPES ({caseData.evidence.length})</option>
-            <option value="document">Documentary</option>
+            <option value="all">ALL TYPES ({allEvidence.length})</option>
+            <option value="document">Documentary / PDF</option>
+            <option value="audio">Audio / Wiretaps</option>
             <option value="forensic">Forensic / DNA</option>
             <option value="digital">Digital / Cyber</option>
             <option value="physical">Physical Exhibit</option>
             <option value="testimony">Deposition Exhibit</option>
           </select>
+
+          <button
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setIsUploadModalOpen(true);
+            }}
+            className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-red-700 text-red-300 hover:bg-red-950/60"
+            title="Attach and log new MP3 audio reel or PDF document to this case file"
+          >
+            <Upload className="w-3.5 h-3.5 text-red-400" />
+            <span>+ ATTACH EXHIBIT (MP3 / PDF)</span>
+          </button>
 
           {onOpenEvidenceBoard && (
             <button
@@ -176,81 +271,92 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
 
       {/* Evidence Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredEvidence.map((ev, idx) => (
-          <div
-            key={ev.id || idx}
-            onClick={() => {
-              soundEngine.playFileAccess();
-              setSelectedEvidence(ev);
-            }}
-            className="retro-window p-4 cursor-pointer hover:border-red-600/80 transition-all flex flex-col justify-between group bg-[#090b0d] hover:bg-[#0c0f13]"
-          >
-            <div>
-              {/* Header: Reference Number & Classification */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-pixel text-[11px] text-red-400 font-bold">
-                  REF: {ev.exhibitNumber || `EX-${(idx + 1).toString().padStart(2, '0')}`}
-                </span>
-                <span className="retro-stamp text-[8px] py-0 px-1">
-                  {ev.classification || 'PUBLIC RECORD'}
-                </span>
-              </div>
+        {filteredEvidence.map((ev, idx) => {
+          const isAudio = isAudioMedia({ originalName: ev.title, url: ev.imageUrl, mediaType: ev.type });
+          const isPdf = isPdfMedia({ originalName: ev.title, url: ev.imageUrl }) || (ev.imageUrl?.toLowerCase().includes('.pdf') ?? false);
 
-              {/* Title */}
-              <h4 className="font-bold text-sm text-zinc-100 group-hover:text-amber-200 transition-colors mb-2 font-editorial">
-                {ev.title}
-              </h4>
-
-              {/* Description */}
-              <p className="text-xs text-zinc-400 font-mono leading-relaxed line-clamp-3 mb-3">
-                {ev.description}
-              </p>
-
-              {/* Investigative Source / Significance */}
-              <div className="p-2 bg-black/60 border border-zinc-900 rounded text-[10px] font-tech text-zinc-400">
-                <span className="text-amber-400/90 font-bold block mb-0.5">SOURCE / CONTEXT:</span>
-                <span className="line-clamp-2">{ev.significance || 'Documented in federal judicial records.'}</span>
-              </div>
-            </div>
-
-            {/* Bottom Actions: Inspect & Pin to Board */}
-            <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs font-tech">
-              <div className="flex items-center space-x-1.5">
-                <span className="uppercase text-[10px] text-zinc-500 font-pixel">
-                  {ev.type}
-                </span>
-                {(ev.type === 'audio' || /audio|wiretap|recording|dispatch|tape|call/i.test(ev.title)) && (
-                  <span className="px-1.5 py-0.2 bg-amber-950 border border-amber-700 text-amber-300 text-[9px] font-pixel rounded flex items-center space-x-0.5">
-                    <Volume2 className="w-2.5 h-2.5 text-amber-400" />
-                    <span>AUDIO REEL</span>
+          return (
+            <div
+              key={ev.id || idx}
+              onClick={() => {
+                soundEngine.playFileAccess();
+                setSelectedEvidence(ev);
+              }}
+              className="retro-window p-4 cursor-pointer hover:border-red-600/80 transition-all flex flex-col justify-between group bg-[#090b0d] hover:bg-[#0c0f13]"
+            >
+              <div>
+                {/* Header: Reference Number & Classification */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-pixel text-[11px] text-red-400 font-bold">
+                    REF: {ev.exhibitNumber || `EX-${(idx + 1).toString().padStart(2, '0')}`}
                   </span>
-                )}
+                  <span className="retro-stamp text-[8px] py-0 px-1">
+                    {ev.classification || 'PUBLIC RECORD'}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h4 className="font-bold text-sm text-zinc-100 group-hover:text-amber-200 transition-colors mb-2 font-editorial">
+                  {ev.title}
+                </h4>
+
+                {/* Description */}
+                <p className="text-xs text-zinc-400 font-mono leading-relaxed line-clamp-3 mb-3">
+                  {ev.description}
+                </p>
+
+                {/* Investigative Source / Significance */}
+                <div className="p-2 bg-black/60 border border-zinc-900 rounded text-[10px] font-tech text-zinc-400">
+                  <span className="text-amber-400/90 font-bold block mb-0.5">SOURCE / CONTEXT:</span>
+                  <span className="line-clamp-2">{ev.significance || 'Documented in federal judicial records.'}</span>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={(e) => handleAddToEvidenceBoard(ev, e)}
-                  title="Pin this card onto your interactive evidence board"
-                  className="px-2 py-0.5 bg-zinc-900 hover:bg-emerald-950/80 border border-zinc-700 hover:border-emerald-600 text-zinc-300 hover:text-emerald-300 rounded text-[10px] font-pixel flex items-center space-x-1 transition-colors"
-                >
-                  <Pin className="w-2.5 h-2.5 text-emerald-400" />
-                  <span>PIN FILE</span>
-                </button>
+              {/* Bottom Actions: Inspect & Pin to Board */}
+              <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs font-tech">
+                <div className="flex items-center space-x-1.5 flex-wrap gap-1">
+                  <span className="uppercase text-[10px] text-zinc-500 font-pixel">
+                    {ev.type}
+                  </span>
+                  {isAudio && (
+                    <span className="px-1.5 py-0.2 bg-amber-950 border border-amber-700 text-amber-300 text-[9px] font-pixel rounded flex items-center space-x-0.5">
+                      <Volume2 className="w-2.5 h-2.5 text-amber-400" />
+                      <span>MP3 AUDIO REEL</span>
+                    </span>
+                  )}
+                  {isPdf && (
+                    <span className="px-1.5 py-0.2 bg-red-950 border border-red-700 text-red-300 text-[9px] font-pixel rounded flex items-center space-x-0.5">
+                      <FileText className="w-2.5 h-2.5 text-red-400" />
+                      <span>PDF DOCUMENT</span>
+                    </span>
+                  )}
+                </div>
 
-                <span className="text-amber-400 font-pixel text-[10px] flex items-center group-hover:translate-x-0.5 transition-transform">
-                  VIEW <Maximize2 className="w-3 h-3 ml-0.5" />
-                </span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={(e) => handleAddToEvidenceBoard(ev, e)}
+                    title="Pin this card onto your interactive evidence board"
+                    className="px-2 py-0.5 bg-zinc-900 hover:bg-emerald-950/80 border border-zinc-700 hover:border-emerald-600 text-zinc-300 hover:text-emerald-300 rounded text-[10px] font-pixel flex items-center space-x-1 transition-colors"
+                  >
+                    <Pin className="w-2.5 h-2.5 text-emerald-400" />
+                    <span>PIN FILE</span>
+                  </button>
+
+                  <span className="text-amber-400 font-pixel text-[10px] flex items-center group-hover:translate-x-0.5 transition-transform">
+                    VIEW <Maximize2 className="w-3 h-3 ml-0.5" />
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Detailed Evidence Viewer Modal */}
       {selectedEvidence && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
-          <div className="retro-window max-w-2xl w-full p-6 text-zinc-300 space-y-4 shadow-2xl bg-[#07090b] border-2 border-red-900/70">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="retro-window max-w-3xl w-full p-6 text-zinc-300 space-y-4 shadow-2xl bg-[#07090b] border-2 border-red-900/70 max-h-[92vh] flex flex-col">
             {/* Modal Titlebar */}
             <div className="retro-window-header active flex items-center justify-between p-2 bg-zinc-900 border-b border-zinc-700">
               <div className="flex items-center space-x-2 text-xs font-pixel text-zinc-200">
@@ -270,8 +376,8 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
               </button>
             </div>
 
-            {/* Exhibit Details */}
-            <div className="space-y-3 font-mono text-xs">
+            {/* Exhibit Details (Scrollable) */}
+            <div className="space-y-3 font-mono text-xs overflow-y-auto pr-1">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
                 <div>
                   <span className="font-pixel text-[10px] text-red-400 font-bold block">
@@ -291,15 +397,33 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
                 </div>
               </div>
 
-              {/* Embedded Audio Player for Audio Exhibits */}
-              {(selectedEvidence.type === 'audio' ||
+              {/* FORMAT-SPECIFIC VIEWER 1: PDF Document Viewer */}
+              {(isPdfMedia({ originalName: selectedEvidence.title, url: selectedEvidence.imageUrl }) ||
+                selectedEvidence.imageUrl?.toLowerCase().includes('.pdf')) &&
+                selectedEvidence.imageUrl && (
+                  <div className="my-3">
+                    <RetroPdfViewer
+                      url={selectedEvidence.imageUrl}
+                      title={selectedEvidence.title}
+                      caseNumber={caseData.caseNumber}
+                      classification={selectedEvidence.classification}
+                      description={selectedEvidence.description}
+                      transcript={selectedEvidence.significance}
+                    />
+                  </div>
+                )}
+
+              {/* FORMAT-SPECIFIC VIEWER 2: Audio Player for Audio Exhibits & MP3s */}
+              {(isAudioMedia({ originalName: selectedEvidence.title, url: selectedEvidence.imageUrl, mediaType: selectedEvidence.type }) ||
+                selectedEvidence.type === 'audio' ||
                 /audio|wiretap|recording|dispatch|tape|call/i.test(selectedEvidence.title) ||
                 /audio|wiretap|recording|dispatch|tape|call/i.test(selectedEvidence.description)) && (
-                <div className="mb-2">
+                <div className="my-3">
                   <RetroAudioPlayer
+                    url={selectedEvidence.imageUrl || ''}
                     title={selectedEvidence.title}
                     caseNumber={caseData.caseNumber}
-                    transcript={selectedEvidence.description}
+                    transcript={selectedEvidence.significance || selectedEvidence.description}
                     mediaType="audio"
                     defaultDuration={180}
                   />
@@ -366,6 +490,123 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Upload Exhibit Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="retro-window max-w-lg w-full p-6 text-zinc-300 space-y-4 shadow-2xl bg-[#080b0f] border-2 border-red-700">
+            <div className="retro-window-header active flex items-center justify-between p-2 bg-zinc-900 border-b border-zinc-700">
+              <div className="flex items-center space-x-2 text-xs font-pixel text-red-400">
+                <Upload className="w-4 h-4" />
+                <span>ATTACH CASE EXHIBIT // {caseData.caseNumber}</span>
+              </div>
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                className="retro-btn text-xs px-2 py-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4 font-mono text-xs">
+              {uploadError && (
+                <div className="p-2.5 bg-red-950/80 border border-red-600 text-red-300 rounded text-xs flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              {/* File Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Select File (MP3 Audio Reel, PDF Document, Image, Video):
+                </label>
+                <input
+                  type="file"
+                  required
+                  accept="audio/*,video/*,image/*,.mp3,.mp4,.m4a,.mpeg,.mpg,.wav,.ogg,.aac,.flac,.webm,.mov,.avi,.pdf"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setUploadFile(f);
+                      if (!uploadTitle) {
+                        setUploadTitle(f.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '));
+                      }
+                    }
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-200 file:mr-3 file:py-1 file:px-3 file:border-0 file:text-xs file:font-mono file:bg-red-950 file:text-red-300 hover:file:bg-red-900"
+                />
+                <span className="text-[9px] text-zinc-500 block">
+                  Supports MP3 audio reels, PDF case transcripts, MP4/MPEG surveillance up to 50MB.
+                </span>
+              </div>
+
+              {/* Title Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Exhibit Title:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 911 Emergency Call Tape / Grand Jury Motion"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Exhibit Description & Context:
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Document origin, chain of custody, or forensic context..."
+                  value={uploadDesc}
+                  onChange={(e) => setUploadDesc(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+
+              {/* Transcript */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                  Official Transcript / Text Excerpt (Optional):
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="[00:00] Dispatcher: State your emergency..."
+                  value={uploadTranscript}
+                  onChange={(e) => setUploadTranscript(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="retro-btn text-xs px-3 py-1.5"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading || !uploadFile}
+                  className="retro-btn retro-btn-red text-xs px-4 py-1.5 flex items-center space-x-1.5 disabled:opacity-50"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploading ? 'ARCHIVING...' : 'LOG EXHIBIT TO DOCKET'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

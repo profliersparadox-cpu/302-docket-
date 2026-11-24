@@ -85,6 +85,8 @@ export const CaseCourtroomGame: React.FC<CaseCourtroomGameProps> = ({
   // Stage 2-4: Trial Rounds State
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [deployedExhibitId, setDeployedExhibitId] = useState<string>('');
+  const [exhibitSynergyAwarded, setExhibitSynergyAwarded] = useState<boolean>(false);
   const [hasEvaluatedRound, setHasEvaluatedRound] = useState<boolean>(false);
   const [isTypingJudgeRuling, setIsTypingJudgeRuling] = useState<boolean>(false);
   const [typedJudgeRuling, setTypedJudgeRuling] = useState<string>('');
@@ -317,10 +319,12 @@ export const CaseCourtroomGame: React.FC<CaseCourtroomGameProps> = ({
 
   // Launch trial from Stage 1 into Stage 2
   const handleProceedToTrial = () => {
-    soundEngine.playBootBeep();
+    soundEngine.playUnsealChord();
     setCurrentStage('stage2_defense');
     setCurrentRoundIndex(0);
     setSelectedOptionId(null);
+    setDeployedExhibitId(selectedExhibitIds[0] || '');
+    setExhibitSynergyAwarded(false);
     setHasEvaluatedRound(false);
     setRevealedRealCase(false);
     setRoundScores([]);
@@ -329,48 +333,69 @@ export const CaseCourtroomGame: React.FC<CaseCourtroomGameProps> = ({
   // Submit response in trial round
   const handleSubmitResponse = () => {
     if (!selectedOptionId) return;
-    soundEngine.playKeyClick();
+    soundEngine.playGavelStrike();
 
     const selectedOpt = currentRound.options.find((o) => o.id === selectedOptionId);
     if (!selectedOpt) return;
 
+    const deployedEv = caseData.evidence.find((e) => e.id === deployedExhibitId);
+    let synergyBonus = 0;
+    if (deployedEv) {
+      const evType = deployedEv.type;
+      const matchesRound =
+        (currentRoundIndex === 0 && (evType === 'forensic' || evType === 'physical')) ||
+        (currentRoundIndex === 1 && (evType === 'document' || evType === 'testimony' || evType === 'audio')) ||
+        currentRoundIndex === 2;
+      if (matchesRound) {
+        synergyBonus = 5;
+      }
+    }
+
+    setExhibitSynergyAwarded(synergyBonus > 0);
     setHasEvaluatedRound(true);
     setIsTypingJudgeRuling(true);
     setTypedJudgeRuling('');
 
+    const exhibitLine = deployedEv
+      ? `\nTENDERED EXHIBIT: [${deployedEv.exhibitNumber}] ${deployedEv.title}${synergyBonus > 0 ? ' (+5 NEXUS SYNERGY)' : ''}`
+      : '';
+
     // Simulate retro typing of judge ruling
-    const textToType = `[RULING FROM THE BENCH: ${selectedOpt.judgeRuling}]\n\n${selectedOpt.judgeAnalysis}\n\nLEGAL STANDARD: ${selectedOpt.legalDoctrine}`;
+    const textToType = `[RULING FROM THE BENCH: ${selectedOpt.judgeRuling}]${exhibitLine}\n\n${selectedOpt.judgeAnalysis}\n\nLEGAL STANDARD: ${selectedOpt.legalDoctrine}`;
     let charIndex = 0;
     const interval = setInterval(() => {
       if (charIndex <= textToType.length) {
         setTypedJudgeRuling(textToType.slice(0, charIndex));
         charIndex += 4;
         if (charIndex % 12 === 0) {
-          soundEngine.playKeyClick();
+          soundEngine.playPrinterTick();
         }
       } else {
         clearInterval(interval);
         setIsTypingJudgeRuling(false);
-        soundEngine.playFileAccess();
+        soundEngine.playStampThud();
       }
-    }, 20);
+    }, 18);
 
-    setRoundScores((prev) => [...prev, selectedOpt.points]);
+    setRoundScores((prev) => [...prev, selectedOpt.points + synergyBonus]);
   };
 
   // Advance to next round or stage 5
   const handleNextRound = () => {
     soundEngine.playKeyClick();
     if (currentRoundIndex + 1 < rounds.length) {
-      setCurrentRoundIndex((prev) => prev + 1);
+      const nextIdx = currentRoundIndex + 1;
+      setCurrentRoundIndex(nextIdx);
       setSelectedOptionId(null);
+      setDeployedExhibitId(selectedExhibitIds[nextIdx] || selectedExhibitIds[0] || '');
+      setExhibitSynergyAwarded(false);
       setHasEvaluatedRound(false);
       setRevealedRealCase(false);
       setTypedJudgeRuling('');
     } else {
       // Proceed to Stage 5: Final Trial Review & Verdict Reveal
       setCurrentStage('stage5_final');
-      soundEngine.playBootBeep();
+      soundEngine.playUnsealChord();
     }
   };
 
@@ -808,6 +833,49 @@ export const CaseCourtroomGame: React.FC<CaseCourtroomGameProps> = ({
             </div>
           </div>
 
+          {/* STEP 2.5: DEPLOY STAGE 1 EXHIBIT FROM TRIAL BUNDLE */}
+          {selectedExhibitIds.length > 0 && (
+            <div className="p-4 bg-[#0a0f14] border border-emerald-900/60 rounded space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-pixel text-[10px] text-emerald-400 uppercase font-bold">
+                  TENDER EXHIBIT FROM YOUR STAGE 1 TRIAL BUNDLE:
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono">
+                  MATCH EXHIBIT TYPE TO ROUND DISPUTE FOR +5 SYNERGY
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {selectedExhibitIds.map((exId) => {
+                  const ev = caseData.evidence.find((e) => e.id === exId);
+                  if (!ev) return null;
+                  const active = deployedExhibitId === exId;
+                  return (
+                    <button
+                      key={exId}
+                      type="button"
+                      disabled={hasEvaluatedRound}
+                      onClick={() => {
+                        soundEngine.playCrossRefLink();
+                        setDeployedExhibitId(exId);
+                      }}
+                      className={`p-2.5 text-left rounded border text-xs transition-all ${
+                        active
+                          ? 'bg-emerald-950/60 border-emerald-500 text-emerald-100 font-bold'
+                          : 'bg-black/50 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-pixel">
+                        <span className="text-emerald-400">{ev.exhibitNumber}</span>
+                        <span className="uppercase text-zinc-500">{ev.type}</span>
+                      </div>
+                      <div className="truncate mt-0.5">{ev.title}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* STEP 3: VISITOR'S RESPONSE OPTIONS (TACTICAL TRIAL STRATEGY) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -890,9 +958,16 @@ export const CaseCourtroomGame: React.FC<CaseCourtroomGameProps> = ({
                     BENCH RULING // {caseData.courtroom?.presidingJudge || 'THE DISTRICT COURT'}
                   </span>
                 </div>
-                <span className="retro-stamp text-[9px] py-0 px-2 text-emerald-400 border-emerald-700">
-                  OFFICIAL RECORDED RULING
-                </span>
+                <div className="flex items-center space-x-2">
+                  {exhibitSynergyAwarded && (
+                    <span className="retro-stamp-green text-[9px] py-0 px-2 animate-stamp-slam">
+                      EXHIBIT SYNERGY +5
+                    </span>
+                  )}
+                  <span className="retro-stamp text-[9px] py-0 px-2 text-emerald-400 border-emerald-700 animate-stamp-slam">
+                    {currentRound.options.find((o) => o.id === selectedOptionId)?.judgeRuling || 'RECORDED'}
+                  </span>
+                </div>
               </div>
 
               {/* Typed Terminal Text */}
@@ -908,7 +983,8 @@ export const CaseCourtroomGame: React.FC<CaseCourtroomGameProps> = ({
                 </span>
                 <span className="font-pixel text-amber-400 text-[10px]">
                   POINTS AWARDED: +
-                  {currentRound.options.find((o) => o.id === selectedOptionId)?.points || 0}
+                  {(currentRound.options.find((o) => o.id === selectedOptionId)?.points || 0) +
+                    (exhibitSynergyAwarded ? 5 : 0)}
                 </span>
               </div>
 

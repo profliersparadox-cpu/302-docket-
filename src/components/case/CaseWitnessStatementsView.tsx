@@ -18,14 +18,21 @@ import {
 import { CaseFile, InterviewRecord, TranscriptLine } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
+import {
+  fetchAllMedia,
+  isAudioMedia,
+  isVideoMedia,
+  MEDIA_UPDATED_EVENT,
+} from '../../utils/mediaVault.ts';
 
 interface CaseWitnessStatementsViewProps {
   caseData: CaseFile;
 }
 
 export const CaseWitnessStatementsView: React.FC<CaseWitnessStatementsViewProps> = ({ caseData }) => {
-  // Collect or dynamically generate interview records from caseData
+  // Collect or dynamically generate interview records from caseData + uploaded audio
   const [statements, setStatements] = useState<InterviewRecord[]>([]);
+  const [uploadedAudioUrls, setUploadedAudioUrls] = useState<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState<InterviewRecord | null>(null);
   const [docLoading, setDocLoading] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
@@ -33,8 +40,57 @@ export const CaseWitnessStatementsView: React.FC<CaseWitnessStatementsViewProps>
   const [showRedactions, setShowRedactions] = useState<boolean>(false);
   const [searchFilter, setSearchFilter] = useState<string>('');
 
-  useEffect(() => {
+  const buildStatements = async () => {
     const list: InterviewRecord[] = [];
+    const urlMap: Record<string, string> = {};
+
+    try {
+      const uploaded = await fetchAllMedia(caseData.slug);
+      uploaded
+        .filter((m) => isAudioMedia(m) || isVideoMedia(m))
+        .forEach((m) => {
+          const stmtId = `stmt-upl-${m.id}`;
+          urlMap[stmtId] = m.url;
+          list.push({
+            id: stmtId,
+            caseSlug: caseData.slug,
+            caseNumber: caseData.caseNumber,
+            title: m.title || m.originalName,
+            interviewee: m.title || m.originalName,
+            interviewer: 'Uploaded Case Audio Exhibit',
+            date: m.uploadedAt.split('T')[0],
+            location: `${m.originalName} (${Math.round(m.size / 1024)} KB)`,
+            recordingMedium: 'Magnetic Reel Audio',
+            classification: 'Declassified FD-302',
+            summary:
+              m.description ||
+              `Uploaded MP3/Audio deposition recording (${m.originalName}) attached to case file ${caseData.caseNumber}.`,
+            transcripts: m.transcript
+              ? m.transcript
+                  .split(/\n+/)
+                  .filter(Boolean)
+                  .map((line, i) => ({
+                    timestamp: `00:${(i * 15).toString().padStart(2, '0')}:00`,
+                    speaker: 'AUDIO TRANSCRIPT',
+                    speakerRole: 'Recorded Participant',
+                    text: line,
+                    isDirectQuote: true,
+                  }))
+              : [
+                  {
+                    timestamp: '00:00:00',
+                    speaker: 'ARCHIVE LOG',
+                    speakerRole: 'Audio Recording',
+                    text: m.description || `Audio recording (${m.originalName}) ready for playback.`,
+                    isDirectQuote: false,
+                  },
+                ],
+            sourceCitation: `Uploaded Archive Audio • ${m.originalName}`,
+          });
+        });
+    } catch (err) {
+      console.warn('Failed to fetch uploaded audio statements:', err);
+    }
 
     // 1. If explicit interviews are defined on the case
     if (caseData.interviews && caseData.interviews.length > 0) {
@@ -158,7 +214,15 @@ export const CaseWitnessStatementsView: React.FC<CaseWitnessStatementsViewProps>
       }
     }
 
+    setUploadedAudioUrls(urlMap);
     setStatements(list);
+  };
+
+  useEffect(() => {
+    buildStatements();
+    const handleUpdate = () => buildStatements();
+    window.addEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
   }, [caseData]);
 
   // Open Document inside Computer Window with subtle page-loading and typing animation
@@ -384,6 +448,8 @@ export const CaseWitnessStatementsView: React.FC<CaseWitnessStatementsViewProps>
                 {/* Embedded Audio Reel Player for Witness Deposition */}
                 <div className="mb-2">
                   <RetroAudioPlayer
+                    key={activeDoc.id}
+                    url={uploadedAudioUrls[activeDoc.id] || ''}
                     title={activeDoc.title}
                     caseNumber={activeDoc.caseNumber}
                     transcript={activeDoc.transcripts?.map((t: TranscriptLine) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join('\n') || activeDoc.summary}

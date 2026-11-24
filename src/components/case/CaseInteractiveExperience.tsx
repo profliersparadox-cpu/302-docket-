@@ -39,13 +39,27 @@ import {
   EvidenceBoardItem,
   EvidenceConnection,
   GeoLocationPoint,
+  MediaItem,
 } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { CaseEvidenceBoardView } from './CaseEvidenceBoardView.tsx';
 import { CaseTimelineView } from './CaseTimelineView.tsx';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
+import { RetroPdfViewer } from '../common/RetroPdfViewer.tsx';
 import { CaseMediaVaultView } from './CaseMediaVaultView.tsx';
 import { CaseColdCaseTheoryLab } from './CaseColdCaseTheoryLab.tsx';
+import { LegalDilemmaBench } from './LegalDilemmaBench.tsx';
+import { DossierCrossRefText, CrossRefHit } from './DossierCrossRefText.tsx';
+import { RetroPrintFeedModal } from '../common/RetroPrintFeedModal.tsx';
+import {
+  fetchAllMedia,
+  isAudioMedia,
+  isVideoMedia,
+  isPdfMedia,
+  convertMediaToDocument,
+  MEDIA_UPDATED_EVENT,
+} from '../../utils/mediaVault.ts';
+import { Printer, Scale, BookOpen, X } from 'lucide-react';
 
 interface CaseInteractiveExperienceProps {
   caseData: CaseFile;
@@ -59,6 +73,21 @@ export const CaseInteractiveExperience: React.FC<CaseInteractiveExperienceProps>
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'pinboard' | 'timeline' | 'documents' | 'interviews' | 'exercise' | 'media' | 'radar'>(initialView);
+  const [uploadedCaseMedia, setUploadedCaseMedia] = useState<MediaItem[]>([]);
+
+  useEffect(() => {
+    const loadCaseMedia = async () => {
+      try {
+        const items = await fetchAllMedia(caseData.slug);
+        setUploadedCaseMedia(items);
+      } catch (err) {
+        console.warn('Failed to fetch case uploaded media:', err);
+      }
+    };
+    loadCaseMedia();
+    window.addEventListener(MEDIA_UPDATED_EVENT, loadCaseMedia);
+    return () => window.removeEventListener(MEDIA_UPDATED_EVENT, loadCaseMedia);
+  }, [caseData.slug]);
 
   // --------------------------------------------------------------------------
   // 1. PINBOARD CANVAS STATE
@@ -264,11 +293,15 @@ export const CaseInteractiveExperience: React.FC<CaseInteractiveExperienceProps>
   // 3. CASE DOCUMENTS STATE
   // --------------------------------------------------------------------------
   const caseDocuments: ArchiveDocument[] = React.useMemo(() => {
+    const uploadedDocs = uploadedCaseMedia
+      .filter((m) => isPdfMedia(m) || (!isAudioMedia(m) && !isVideoMedia(m) && !m.mimeType?.startsWith('image/')))
+      .map((m) => convertMediaToDocument(m));
+
     if (caseData.documents && caseData.documents.length > 0) {
-      return caseData.documents;
+      return [...uploadedDocs, ...caseData.documents];
     }
     // Generate dynamic documents from caseData citations, evidence, and autopsy
-    const docs: ArchiveDocument[] = [];
+    const docs: ArchiveDocument[] = [...uploadedDocs];
 
     docs.push({
       id: `doc-${caseData.slug}-01`,
@@ -343,7 +376,7 @@ ${caseData.verdict.appealsAndRulings}`,
     }
 
     return docs;
-  }, [caseData]);
+  }, [caseData, uploadedCaseMedia]);
 
   const [selectedDocId, setSelectedDocId] = useState<string>(caseDocuments[0]?.id || '');
   const [docZoom, setDocZoom] = useState<number>(100);
@@ -353,12 +386,56 @@ ${caseData.verdict.appealsAndRulings}`,
   // --------------------------------------------------------------------------
   // 4. INTERVIEWS & TRANSCRIPTS STATE
   // --------------------------------------------------------------------------
+  const uploadedAudioUrls = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    uploadedCaseMedia
+      .filter((m) => isAudioMedia(m) || isVideoMedia(m))
+      .forEach((m) => {
+        map[`int-upl-${m.id}`] = m.url;
+      });
+    return map;
+  }, [uploadedCaseMedia]);
+
   const caseInterviews: InterviewRecord[] = React.useMemo(() => {
+    const uploadedInterviews: InterviewRecord[] = uploadedCaseMedia
+      .filter((m) => isAudioMedia(m) || isVideoMedia(m))
+      .map((m) => ({
+        id: `int-upl-${m.id}`,
+        caseSlug: caseData.slug,
+        caseNumber: caseData.caseNumber,
+        title: m.title || m.originalName,
+        interviewee: m.title || m.originalName,
+        interviewer: 'Uploaded Case Audio Exhibit',
+        date: m.uploadedAt.split('T')[0],
+        location: m.originalName,
+        recordingMedium: 'Magnetic Reel Audio',
+        classification: 'Declassified FD-302',
+        summary: m.description || `Uploaded MP3/Audio Recording (${m.originalName})`,
+        transcripts: m.transcript
+          ? m.transcript.split(/\n+/).filter(Boolean).map((line, i) => ({
+              timestamp: `00:${(i * 15).toString().padStart(2, '0')}`,
+              speaker: 'TRANSCRIPT LOG',
+              speakerRole: 'Audio Recording',
+              text: line,
+              isDirectQuote: true,
+            }))
+          : [
+              {
+                timestamp: '00:00:00',
+                speaker: 'ARCHIVE LOG',
+                speakerRole: 'Uploaded Audio',
+                text: m.description || `Audio recording (${m.originalName}) ready for playback.`,
+                isDirectQuote: false,
+              },
+            ],
+        sourceCitation: `Uploaded Archive Audio • ${m.originalName}`,
+      }));
+
     if (caseData.interviews && caseData.interviews.length > 0) {
-      return caseData.interviews;
+      return [...uploadedInterviews, ...caseData.interviews];
     }
     // Generate dynamic interviews from keyTestimonies and interviewRecordsSummary
-    const interviews: InterviewRecord[] = [];
+    const interviews: InterviewRecord[] = [...uploadedInterviews];
 
     if (caseData.courtroom.keyTestimonies && caseData.courtroom.keyTestimonies.length > 0) {
       caseData.courtroom.keyTestimonies.forEach((t, idx) => {
@@ -428,24 +505,18 @@ ${caseData.verdict.appealsAndRulings}`,
     }
 
     return interviews;
-  }, [caseData]);
+  }, [caseData, uploadedCaseMedia]);
 
   const [selectedInterviewId, setSelectedInterviewId] = useState<string>(caseInterviews[0]?.id || '');
   const [isPlayingTape, setIsPlayingTape] = useState(false);
   const activeInterview = caseInterviews.find((i) => i.id === selectedInterviewId) || caseInterviews[0];
 
   // --------------------------------------------------------------------------
-  // 5. INVESTIGATIVE EXERCISE / KNOWLEDGE ASSESSMENT
+  // 5. INVESTIGATIVE EXERCISE / DECISION LAB STATE
   // --------------------------------------------------------------------------
-  const [exerciseIndex, setExerciseIndex] = useState(0);
-  const [selectedExerciseOption, setSelectedExerciseOption] = useState<number | null>(null);
-  const [showExerciseDebrief, setShowExerciseDebrief] = useState(false);
-
-  const activeReflection = caseData.reflectionPrompts?.[exerciseIndex] || {
-    question: `What primary procedural challenge defines the investigation of ${caseData.title}?`,
-    context: caseData.summary,
-    legalOrEthicalIssue: 'The preservation of constitutional evidence integrity during complex investigative operations.',
-  };
+  const [coldCaseLabMode, setColdCaseLabMode] = useState<'theory' | 'precedent'>('precedent');
+  const [docCrossRef, setDocCrossRef] = useState<CrossRefHit | null>(null);
+  const [printDocOpen, setPrintDocOpen] = useState(false);
 
   return (
     <div className="w-full bg-[#0a0d12] border-2 border-zinc-800 rounded-lg shadow-2xl flex flex-col overflow-hidden text-zinc-300 font-tech">
@@ -610,27 +681,110 @@ ${caseData.verdict.appealsAndRulings}`,
 
             {/* Document Reading View */}
             <div className="flex-1 p-6 overflow-y-auto bg-zinc-950 flex flex-col space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3 font-mono text-xs">
                 <span className="text-amber-400 font-bold">{activeDocument.title}</span>
-                <button
-                  onClick={() => {
-                    soundEngine.playKeyClick();
-                    setRevealDocRedactions((prev) => !prev);
-                  }}
-                  className="px-2.5 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded flex items-center space-x-1.5"
-                >
-                  {revealDocRedactions ? <Eye className="w-3.5 h-3.5 text-red-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-                  <span>{revealDocRedactions ? 'REDACTIONS: VISIBLE' : 'REDACTIONS: MASKED'}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playKeyClick();
+                      setPrintDocOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 rounded flex items-center space-x-1.5"
+                    title="Print document on retro physical feed"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>FEED PRINT</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      soundEngine.playKeyClick();
+                      setRevealDocRedactions((prev) => !prev);
+                    }}
+                    className="px-2.5 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded flex items-center space-x-1.5"
+                  >
+                    {revealDocRedactions ? <Eye className="w-3.5 h-3.5 text-red-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{revealDocRedactions ? 'REDACTIONS: VISIBLE' : 'REDACTIONS: MASKED'}</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="bg-[#0b0e12] border border-zinc-800 rounded p-6 font-typewriter text-xs text-zinc-300 leading-relaxed whitespace-pre-line shadow-inner">
-                {activeDocument.documentBody}
-              </div>
+              {docCrossRef && (
+                <div className="p-3.5 bg-[#0a0f16] border border-amber-600/80 rounded space-y-1.5 text-xs font-mono">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-1">
+                    <span className="text-[10px] font-pixel text-amber-400 flex items-center space-x-1.5">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>DOCUMENT CROSS-REFERENCE</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setDocCrossRef(null)}
+                      className="text-zinc-400 hover:text-zinc-100"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {docCrossRef.kind === 'evidence' && (
+                    <div className="text-zinc-200 font-tech">
+                      <strong className="text-emerald-300">{docCrossRef.item.title}:</strong>{' '}
+                      {docCrossRef.item.description}
+                    </div>
+                  )}
+                  {docCrossRef.kind === 'poi' && (
+                    <div className="text-zinc-200 font-tech">
+                      <strong className="text-red-300">{docCrossRef.item.name} ({docCrossRef.item.status}):</strong>{' '}
+                      {docCrossRef.item.verifiedFindings || docCrossRef.item.background}
+                    </div>
+                  )}
+                  {docCrossRef.kind === 'doctrine' && (
+                    <div className="text-zinc-200 font-tech">
+                      <strong className="text-amber-300">{docCrossRef.item.term} ({docCrossRef.item.citation}):</strong>{' '}
+                      {docCrossRef.item.summary}
+                    </div>
+                  )}
+                </div>
+              )}
 
-              <div className="text-xs font-mono text-zinc-500 border-t border-zinc-900 pt-2">
-                CITING RECORD: {activeDocument.officialCitation}
-              </div>
+              {activeDocument.downloadUrl && isPdfMedia({ url: activeDocument.downloadUrl, originalName: activeDocument.title }) ? (
+                <RetroPdfViewer
+                  key={activeDocument.id}
+                  url={activeDocument.downloadUrl}
+                  title={activeDocument.title}
+                  caseNumber={activeDocument.caseNumber}
+                  classification={activeDocument.classification}
+                  date={activeDocument.date}
+                  authorOrAgency={activeDocument.authorOrAgency}
+                  description={activeDocument.summary}
+                  transcript={activeDocument.documentBody}
+                />
+              ) : (
+                <>
+                  <div className="bg-[#0b0e12] border border-zinc-800 rounded p-6 font-typewriter text-xs text-zinc-300 leading-relaxed whitespace-pre-line shadow-inner">
+                    <DossierCrossRefText
+                      text={activeDocument.documentBody}
+                      caseData={caseData}
+                      onInspectRef={setDocCrossRef}
+                    />
+                  </div>
+
+                  {activeDocument.redactions && activeDocument.redactions.length > 0 && (
+                    <div className="p-3 bg-zinc-900/70 border border-zinc-800 rounded text-xs font-mono space-y-1">
+                      {activeDocument.redactions.map((red) => (
+                        <div key={red.id} className="text-zinc-400">
+                          <span className="text-red-400 font-bold">[{red.label}]</span> {red.reason}
+                          {revealDocRedactions && (
+                            <span className="block text-red-300 italic mt-0.5">{red.redactedText}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-xs font-mono text-zinc-500 border-t border-zinc-900 pt-2">
+                    CITING RECORD: {activeDocument.officialCitation}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -669,6 +823,7 @@ ${caseData.verdict.appealsAndRulings}`,
               {/* Full Featured Audio Player for Interview Reel */}
               <RetroAudioPlayer
                 key={activeInterview.id}
+                url={uploadedAudioUrls[activeInterview.id] || ''}
                 title={activeInterview.title}
                 caseNumber={caseData.caseNumber}
                 transcript={activeInterview.transcripts?.map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`).join('\n') || activeInterview.summary}
@@ -714,102 +869,53 @@ ${caseData.verdict.appealsAndRulings}`,
         )}
 
         {/* ================================================================= */}
-        {/* TAB 5: CASE-SPECIFIC THEORY LAB (COLD CASES) / METHODOLOGICAL LAB */}
+        {/* TAB 5: LEGAL DILEMMA BENCH & COLD CASE THEORY LAB */}
         {/* ================================================================= */}
         {activeTab === 'exercise' && (
           <div className="flex-1 p-6 overflow-y-auto space-y-6 font-mono text-xs">
             {caseData.status === 'Cold Case / Unresolved' || caseData.status === 'Active Investigation' ? (
-              <CaseColdCaseTheoryLab caseData={caseData} />
-            ) : (
-              <div className="space-y-6">
-                <div className="border-b border-zinc-800 pb-3 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-emerald-400 uppercase tracking-widest block">
-                      ETHICAL & LEGAL PRECEDENT ANALYSIS // ADJUDICATED CASE
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold font-editorial text-zinc-100">
-                      {caseData.title}: Legal Principles & Casework Standards
-                    </h3>
-                  </div>
-                  <div className="text-zinc-500 text-[11px]">
-                    PRECEDENT {exerciseIndex + 1} OF {caseData.reflectionPrompts?.length || 1}
-                  </div>
+              <div className="space-y-5">
+                <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playUnsealChord();
+                      setColdCaseLabMode('precedent');
+                    }}
+                    className={`px-3 py-1.5 rounded border text-xs font-pixel flex items-center space-x-1.5 ${
+                      coldCaseLabMode === 'precedent'
+                        ? 'bg-amber-950/70 border-amber-500 text-amber-200 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <Scale className="w-3.5 h-3.5 text-amber-400" />
+                    <span>1. CONSTITUTIONAL &amp; EVIDENTIARY DILEMMAS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playKeyClick();
+                      setColdCaseLabMode('theory');
+                    }}
+                    className={`px-3 py-1.5 rounded border text-xs font-pixel flex items-center space-x-1.5 ${
+                      coldCaseLabMode === 'theory'
+                        ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <Award className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>2. COLD CASE WORKING THEORY LAB</span>
+                  </button>
                 </div>
 
-                <div className="p-3 bg-black/60 border border-zinc-800 text-xs font-tech text-zinc-400">
-                  <strong className="text-zinc-300">NOTE:</strong> This case was conclusively adjudicated in court. Real guilt was legally determined. The following review analyzes procedural ethics and evidentiary standards established by the prosecution.
-                </div>
-
-                {/* Scenario Card */}
-                <div className="p-5 bg-zinc-900/90 border-2 border-zinc-800 rounded-lg space-y-4">
-                  <div className="space-y-2">
-                    <span className="text-[10px] text-amber-400 uppercase font-bold block">
-                      CASEWORK CONTEXT & EVIDENCE PROBLEM:
-                    </span>
-                    <p className="text-zinc-200 text-xs sm:text-sm font-typewriter leading-relaxed">
-                      {activeReflection.question}
-                    </p>
-                    <p className="text-zinc-400 text-xs leading-relaxed">
-                      {activeReflection.context}
-                    </p>
-                  </div>
-
-                  {/* Multiple Choice Decision Options */}
-                  <div className="space-y-2 pt-2">
-                    {[
-                      {
-                        id: 1,
-                        text: 'Conduct high-resolution laboratory re-testing and audit physical chain of custody.',
-                        isOptimal: true,
-                        debrief: 'Optimal protocol: Scientific validation and evidence integrity audits reduce false leads and preserve admissibility under Daubert/Frye judicial standards.',
-                      },
-                      {
-                        id: 2,
-                        text: 'Prematurely release unconfirmed leads to public tip lines to accelerate arrest warrants.',
-                        isOptimal: false,
-                        debrief: 'Cognitive risk: Public disclosures without corroborating forensics risk witness taint and jury pool bias.',
-                      },
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => {
-                          soundEngine.playKeyClick();
-                          setSelectedExerciseOption(opt.id);
-                          setShowExerciseDebrief(true);
-                          if (opt.isOptimal) soundEngine.playBootBeep();
-                          else soundEngine.playWarning();
-                        }}
-                        className={`w-full p-3.5 text-left rounded border transition-colors flex items-center justify-between ${
-                          selectedExerciseOption === opt.id
-                            ? opt.isOptimal
-                              ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
-                              : 'bg-red-950 border-red-500 text-red-200'
-                            : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700 text-zinc-300'
-                        }`}
-                      >
-                        <span>{opt.text}</span>
-                        {selectedExerciseOption === opt.id && (
-                          <span className="font-bold">
-                            {opt.isOptimal ? '✓ OPTIMAL' : '✕ SUB-OPTIMAL'}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Analytical Debriefing */}
-                  {showExerciseDebrief && (
-                    <div className="p-4 bg-zinc-950 border border-zinc-700 rounded space-y-2 animate-in fade-in">
-                      <div className="text-amber-400 font-bold uppercase text-[10px]">
-                        METHODOLOGICAL DEBRIEF & ETHICAL PRINCIPLE:
-                      </div>
-                      <p className="text-zinc-300 leading-relaxed text-xs">
-                        {activeReflection.legalOrEthicalIssue}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {coldCaseLabMode === 'precedent' ? (
+                  <LegalDilemmaBench caseData={caseData} />
+                ) : (
+                  <CaseColdCaseTheoryLab caseData={caseData} />
+                )}
               </div>
+            ) : (
+              <LegalDilemmaBench caseData={caseData} />
             )}
           </div>
         )}
@@ -823,6 +929,23 @@ ${caseData.verdict.appealsAndRulings}`,
           </div>
         )}
       </div>
+
+      {/* Physical Document Feed Modal for Active Document */}
+      {activeDocument && (
+        <RetroPrintFeedModal
+          caseData={caseData}
+          isOpen={printDocOpen}
+          onClose={() => setPrintDocOpen(false)}
+          documentOverride={{
+            title: activeDocument.title,
+            classification: activeDocument.classification,
+            date: activeDocument.date,
+            agency: activeDocument.authorOrAgency,
+            body: activeDocument.documentBody,
+            citation: activeDocument.officialCitation,
+          }}
+        />
+      )}
     </div>
   );
 };
