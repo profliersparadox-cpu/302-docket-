@@ -17,20 +17,28 @@ import {
   Upload,
   Download,
   AlertCircle,
+  Sliders,
 } from 'lucide-react';
 import { CaseFile, EvidenceItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { HighlightText } from '../../context/DocumentHighlightContext.tsx';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
 import { RetroPdfViewer } from '../common/RetroPdfViewer.tsx';
+import { RetroPhotoEditor } from '../common/RetroPhotoEditor.tsx';
+import { GitHubBackupModal } from '../common/GitHubBackupModal.tsx';
 import {
   fetchAllMedia,
   uploadMediaFile,
   isAudioMedia,
   isPdfMedia,
   isVideoMedia,
+  isImageMedia,
   convertMediaToEvidence,
   MEDIA_UPDATED_EVENT,
 } from '../../utils/mediaVault.ts';
+import { getEvidenceImage } from '../../data/exhibitImages.ts';
+import { addWorkBoardPin, DOCKET_PIN_DRAG_MIME } from '../../utils/workBoard.ts';
+import { recordLedgerEvent } from '../../utils/investigativeLedger.ts';
 
 interface CaseEvidenceViewProps {
   caseData: CaseFile;
@@ -55,6 +63,8 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
   const [uploadTranscript, setUploadTranscript] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [editingEvidencePhoto, setEditingEvidencePhoto] = useState<EvidenceItem | null>(null);
+  const [isGitHubBackupOpen, setIsGitHubBackupOpen] = useState(false);
 
   // Load uploaded media specifically matching this case
   const loadCaseUploadedMedia = async () => {
@@ -125,19 +135,22 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
       // Check if already on board
       const exists = boardData.items?.some((i: any) => i.id === `ev-${ev.id}`);
       if (!exists) {
+        const resolvedImg = getEvidenceImage(ev);
         const newItem = {
           id: `ev-${ev.id}`,
           title: ev.title,
           itemType: ev.type || 'physical',
           status: ev.classification === 'Confidential' ? 'Forensic Theory' : 'Established Fact',
           x: 100 + ((boardData.items?.length || 0) % 3) * 260,
-          y: 80 + Math.floor((boardData.items?.length || 0) / 3) * 190,
+          y: 80 + Math.floor((boardData.items?.length || 0) / 3) * 240,
           snippet: ev.description,
           source: ev.significance,
           date: ev.recoveredAt,
           caseSlug: caseData.slug,
           caseNumber: caseData.caseNumber,
           tags: [ev.type, ev.classification],
+          imageUrl: ev.imageUrl || resolvedImg.url,
+          imageCaption: resolvedImg.caption,
         };
         boardData.items = [...(boardData.items || []), newItem];
         localStorage.setItem(storageKey, JSON.stringify(boardData));
@@ -148,6 +161,14 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
 
     // Trigger visual toast animation
     setAddedToast(ev.exhibitNumber || ev.title);
+    recordLedgerEvent(caseData.slug, {
+      caseNumber: caseData.caseNumber,
+      category: 'pin',
+      action: 'Pinned Exhibit to Board',
+      subject: `${ev.exhibitNumber || 'EXHIBIT'} — ${ev.title}`,
+      detail: ev.description.slice(0, 120),
+      dedupeKey: `ev-board-pin-${ev.id || ev.title}`,
+    });
     setTimeout(() => {
       setAddedToast(null);
     }, 2800);
@@ -278,11 +299,36 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
           return (
             <div
               key={ev.id || idx}
+              draggable
+              onDragStart={(e) => {
+                const label = `Exhibit ${ev.exhibitNumber || `EX-${(idx + 1).toString().padStart(2, '0')}`}`;
+                const summaryText = `${ev.title} — ${ev.description}`;
+                e.dataTransfer.setData(
+                  DOCKET_PIN_DRAG_MIME,
+                  JSON.stringify({
+                    text: summaryText,
+                    sourceLabel: label,
+                    kind: 'evidence',
+                    tone: 'emerald',
+                  })
+                );
+                e.dataTransfer.setData('text/plain', `${label}: ${summaryText}`);
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
               onClick={() => {
                 soundEngine.playFileAccess();
                 setSelectedEvidence(ev);
+                recordLedgerEvent(caseData.slug, {
+                  caseNumber: caseData.caseNumber,
+                  category: 'document_view',
+                  action: 'Inspected Exhibit',
+                  subject: `${ev.exhibitNumber || `EX-${(idx + 1).toString().padStart(2, '0')}`} · ${ev.title}`,
+                  detail: ev.classification || ev.type,
+                  dedupeKey: `ev-view-${ev.id || ev.title}`,
+                });
               }}
               className="retro-window p-4 cursor-pointer hover:border-red-600/80 transition-all flex flex-col justify-between group bg-[#090b0d] hover:bg-[#0c0f13]"
+              title="Click to inspect or drag exhibit directly into the Work Board"
             >
               <div>
                 {/* Header: Reference Number & Classification */}
@@ -295,20 +341,34 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
                   </span>
                 </div>
 
+                {/* Exhibit Photograph Preview */}
+                {!isAudio && !isPdf && (
+                  <div className="mb-2.5 border border-zinc-800 bg-black/70 overflow-hidden rounded">
+                    <img
+                      src={getEvidenceImage(ev).url}
+                      alt={ev.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  </div>
+                )}
+
                 {/* Title */}
                 <h4 className="font-bold text-sm text-zinc-100 group-hover:text-amber-200 transition-colors mb-2 font-editorial">
-                  {ev.title}
+                  <HighlightText text={ev.title} />
                 </h4>
 
                 {/* Description */}
                 <p className="text-xs text-zinc-400 font-mono leading-relaxed line-clamp-3 mb-3">
-                  {ev.description}
+                  <HighlightText text={ev.description} />
                 </p>
 
                 {/* Investigative Source / Significance */}
                 <div className="p-2 bg-black/60 border border-zinc-900 rounded text-[10px] font-tech text-zinc-400">
                   <span className="text-amber-400/90 font-bold block mb-0.5">SOURCE / CONTEXT:</span>
-                  <span className="line-clamp-2">{ev.significance || 'Documented in federal judicial records.'}</span>
+                  <span className="line-clamp-2">
+                    <HighlightText text={ev.significance || 'Documented in federal judicial records.'} />
+                  </span>
                 </div>
               </div>
 
@@ -332,7 +392,30 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      soundEngine.playBootBeep();
+                      const label = `Exhibit ${ev.exhibitNumber || `EX-${(idx + 1).toString().padStart(2, '0')}`}`;
+                      addWorkBoardPin(caseData.slug, {
+                        caseNumber: caseData.caseNumber,
+                        text: `${ev.title} — ${ev.description}`,
+                        sourceLabel: label,
+                        kind: 'evidence',
+                        tone: 'emerald',
+                      });
+                      setAddedToast(`${ev.title} (Work Board)`);
+                      setTimeout(() => setAddedToast(null), 2600);
+                    }}
+                    title="Pin this exhibit directly to the side-panel Work Board"
+                    className="px-2 py-0.5 bg-zinc-900 hover:bg-amber-950/80 border border-zinc-700 hover:border-amber-500 text-zinc-300 hover:text-amber-300 rounded text-[10px] font-pixel flex items-center space-x-1 transition-colors"
+                  >
+                    <Plus className="w-2.5 h-2.5 text-amber-400" />
+                    <span>WORK BOARD</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={(e) => handleAddToEvidenceBoard(ev, e)}
@@ -430,6 +513,38 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
                 </div>
               )}
 
+              {/* FORMAT-SPECIFIC VIEWER 3: Forensic Image Plate */}
+              {!isPdfMedia({ originalName: selectedEvidence.title, url: selectedEvidence.imageUrl }) &&
+                !isAudioMedia({ originalName: selectedEvidence.title, url: selectedEvidence.imageUrl, mediaType: selectedEvidence.type }) &&
+                selectedEvidence.type !== 'audio' && (
+                  <div className="my-2 border border-zinc-800 bg-black/80 rounded overflow-hidden">
+                    <img
+                      src={
+                        isImageMedia({ originalName: selectedEvidence.title, url: selectedEvidence.imageUrl })
+                          ? selectedEvidence.imageUrl
+                          : getEvidenceImage(selectedEvidence).url
+                      }
+                      alt={selectedEvidence.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full max-h-64 object-cover"
+                    />
+                    <div className="px-3 py-1.5 bg-zinc-950 border-t border-zinc-800 text-[10px] font-tech text-zinc-400 flex items-center justify-between gap-2">
+                      <span>{getEvidenceImage(selectedEvidence).caption}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundEngine.playKeyClick();
+                          setEditingEvidencePhoto(selectedEvidence);
+                        }}
+                        className="px-2 py-0.5 bg-amber-950/70 hover:bg-amber-900 border border-amber-600 text-amber-200 rounded font-mono flex items-center space-x-1 shrink-0"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>EDIT PHOTO</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
               {/* Description Block */}
               <div className="bg-[#0b0e11] p-3.5 border border-zinc-800 space-y-1">
                 <span className="text-[10px] font-pixel text-zinc-400 uppercase block">
@@ -468,14 +583,36 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
-              <button
-                onClick={() => handleAddToEvidenceBoard(selectedEvidence)}
-                className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-emerald-700 text-emerald-300 hover:bg-emerald-950/60"
-              >
-                <Pin className="w-3.5 h-3.5 text-emerald-400" />
-                <span>PIN FILE TO EVIDENCE BOARD</span>
-              </button>
+            <div className="pt-3 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    soundEngine.playBootBeep();
+                    const label = `Exhibit ${selectedEvidence.exhibitNumber || selectedEvidence.title}`;
+                    addWorkBoardPin(caseData.slug, {
+                      caseNumber: caseData.caseNumber,
+                      text: `${selectedEvidence.title} — ${selectedEvidence.description}`,
+                      sourceLabel: label,
+                      kind: 'evidence',
+                      tone: 'emerald',
+                    });
+                    setAddedToast(`${selectedEvidence.title} (Work Board)`);
+                    setTimeout(() => setAddedToast(null), 2600);
+                  }}
+                  className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-amber-700 text-amber-300 hover:bg-amber-950/60"
+                >
+                  <Plus className="w-3.5 h-3.5 text-amber-400" />
+                  <span>PIN TO WORK BOARD</span>
+                </button>
+
+                <button
+                  onClick={() => handleAddToEvidenceBoard(selectedEvidence)}
+                  className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-emerald-700 text-emerald-300 hover:bg-emerald-950/60"
+                >
+                  <Pin className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>PIN FILE TO EVIDENCE BOARD</span>
+                </button>
+              </div>
 
               <button
                 onClick={() => {
@@ -606,6 +743,34 @@ export const CaseEvidenceView: React.FC<CaseEvidenceViewProps> = ({
           </div>
         </div>
       )}
+
+      {editingEvidencePhoto && (
+        <RetroPhotoEditor
+          isOpen={Boolean(editingEvidencePhoto)}
+          imageUrl={
+            isImageMedia({ originalName: editingEvidencePhoto.title, url: editingEvidencePhoto.imageUrl }) &&
+            editingEvidencePhoto.imageUrl
+              ? editingEvidencePhoto.imageUrl
+              : getEvidenceImage(editingEvidencePhoto).url
+          }
+          initialTitle={editingEvidencePhoto.title}
+          initialDescription={editingEvidencePhoto.description}
+          caseSlug={caseData.slug}
+          caseNumber={caseData.caseNumber}
+          onClose={() => setEditingEvidencePhoto(null)}
+          onSaved={async (saved) => {
+            await loadCaseUploadedMedia();
+            setSelectedEvidence(convertMediaToEvidence(saved, 0));
+          }}
+          onOpenGitHubBackup={() => setIsGitHubBackupOpen(true)}
+        />
+      )}
+
+      <GitHubBackupModal
+        isOpen={isGitHubBackupOpen}
+        onClose={() => setIsGitHubBackupOpen(false)}
+        defaultCommitMessage={`302 Docket: Backup ${caseData.caseNumber} edited exhibit photo`}
+      />
     </div>
   );
 };

@@ -36,6 +36,24 @@ export const isPdfMedia = (item: {
   return ext === 'pdf';
 };
 
+export const getEmbedVideoUrl = (url?: string): string | null => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  // YouTube watch, short youtu.be, or embed URLs
+  const ytMatch = trimmed.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/i
+  );
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  }
+  // Vimeo URLs
+  const vimeoMatch = trimmed.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+  return null;
+};
+
 export const isVideoMedia = (item: {
   mimeType?: string;
   url?: string;
@@ -47,6 +65,9 @@ export const isVideoMedia = (item: {
     return true;
   }
   if (item.mimeType && item.mimeType.toLowerCase().startsWith('video/')) {
+    return true;
+  }
+  if (getEmbedVideoUrl(item.url)) {
     return true;
   }
   const name = (item.originalName || item.filename || item.url || '').toLowerCase();
@@ -189,6 +210,149 @@ export const uploadMediaFile = async (
   return mediaItem;
 };
 
+// Replace an existing uploaded image asset (authenticated admin) or upload edited copy
+export const replaceMediaImage = async (
+  mediaId: string,
+  file: File,
+  metadata?: { title?: string; description?: string }
+): Promise<MediaItem> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (metadata?.title) formData.append('title', metadata.title);
+  if (metadata?.description) formData.append('description', metadata.description);
+
+  const res = await fetch(`/api/admin/media/${encodeURIComponent(mediaId)}/image`, {
+    method: 'PUT',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to update existing media image.');
+  }
+
+  const updated: MediaItem = await res.json();
+  try {
+    const localRaw = localStorage.getItem('docket_custom_media');
+    if (localRaw) {
+      const existing: MediaItem[] = JSON.parse(localRaw);
+      const next = existing.map((item) => (item.id === updated.id ? updated : item));
+      localStorage.setItem('docket_custom_media', JSON.stringify(next));
+    }
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT, { detail: updated }));
+  return updated;
+};
+
+// Add an external Video or Audio URL (MP4, MP3, WAV, YouTube, Vimeo)
+export const addMediaLink = async (payload: {
+  url: string;
+  mediaKind: 'video' | 'audio';
+  caseSlug: string;
+  caseNumber?: string;
+  title?: string;
+  description?: string;
+  transcript?: string;
+}): Promise<MediaItem> => {
+  const trimmedUrl = payload.url.trim();
+  let mediaItem: MediaItem;
+
+  try {
+    const res = await fetch('/api/media/link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      throw new Error('Link registration returned error');
+    }
+    mediaItem = await res.json();
+  } catch {
+    mediaItem = {
+      id: 'media-link-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      filename: trimmedUrl,
+      originalName: payload.title?.trim() || trimmedUrl,
+      mimeType: payload.mediaKind === 'audio' ? 'audio/mpeg' : 'video/mp4',
+      size: 0,
+      url: trimmedUrl,
+      uploadedAt: new Date().toISOString(),
+      caseSlug: payload.caseSlug,
+      caseNumber: payload.caseNumber,
+      title: payload.title?.trim() || (payload.mediaKind === 'audio' ? 'Linked Audio' : 'Linked Video'),
+      description: payload.description?.trim(),
+      transcript: payload.transcript?.trim(),
+    };
+  }
+
+  try {
+    const localRaw = localStorage.getItem('docket_custom_media');
+    const existing: MediaItem[] = localRaw ? JSON.parse(localRaw) : [];
+    existing.unshift(mediaItem);
+    localStorage.setItem('docket_custom_media', JSON.stringify(existing));
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT, { detail: mediaItem }));
+  return mediaItem;
+};
+
+// Update user-added media metadata (title, case assignment, description, transcript)
+export const updateCustomMedia = async (
+  id: string,
+  updates: Partial<Pick<MediaItem, 'title' | 'description' | 'transcript' | 'caseSlug' | 'caseNumber'>>
+): Promise<MediaItem | null> => {
+  let updated: MediaItem | null = null;
+  try {
+    const res = await fetch(`/api/media/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      updated = await res.json();
+    }
+  } catch {}
+
+  try {
+    const localRaw = localStorage.getItem('docket_custom_media');
+    const existing: MediaItem[] = localRaw ? JSON.parse(localRaw) : [];
+    const next = existing.map((item) => {
+      if (item.id === id) {
+        const merged = { ...item, ...updates, ...(updated || {}) };
+        updated = merged;
+        return merged;
+      }
+      return item;
+    });
+    localStorage.setItem('docket_custom_media', JSON.stringify(next));
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT, { detail: updated }));
+  return updated;
+};
+
+// Delete a user-added media item
+export const deleteCustomMedia = async (id: string): Promise<boolean> => {
+  let ok = false;
+  try {
+    const res = await fetch(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (res.ok) ok = true;
+  } catch {}
+
+  try {
+    const localRaw = localStorage.getItem('docket_custom_media');
+    if (localRaw) {
+      const existing: MediaItem[] = JSON.parse(localRaw);
+      const next = existing.filter((item) => item.id !== id);
+      localStorage.setItem('docket_custom_media', JSON.stringify(next));
+      ok = true;
+    }
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent(MEDIA_UPDATED_EVENT, { detail: { deletedId: id } }));
+  return ok;
+};
+
 // Convert a MediaItem into an EvidenceItem for the Case Evidence Room
 export const convertMediaToEvidence = (media: MediaItem, index: number): EvidenceItem => {
   const isAudio = isAudioMedia(media);
@@ -264,10 +428,10 @@ export const convertMediaToCaseMedia = (media: MediaItem): CaseMediaItem => {
   const isVideo = isVideoMedia(media);
   const isPdf = isPdfMedia(media);
 
-  let mediaType: 'audio' | 'recording' | 'image' | 'video' | 'wiretap' = 'image';
+  let mediaType: 'audio' | 'recording' | 'image' | 'video' | 'wiretap' | 'document' = 'image';
   if (isAudio) mediaType = 'audio';
   else if (isVideo) mediaType = 'video';
-  else if (isPdf) mediaType = 'recording';
+  else if (isPdf) mediaType = 'document';
 
   return {
     id: media.id,

@@ -2,6 +2,10 @@ import React from 'react';
 import { CaseFile, EvidenceItem, PersonOfInterest } from '../../types.ts';
 import { LEGAL_DOCTRINE_GLOSSARY, LegalDoctrineRef } from '../../data/legalDilemmasData.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import {
+  useDocumentHighlight,
+  renderHighlightedText,
+} from '../../context/DocumentHighlightContext.tsx';
 
 export type CrossRefHit =
   | { kind: 'evidence'; item: EvidenceItem }
@@ -30,6 +34,8 @@ export const DossierCrossRefText: React.FC<DossierCrossRefTextProps> = ({
   onInspectRef,
   className = '',
 }) => {
+  const highlightConfig = useDocumentHighlight();
+
   if (!text) return null;
 
   const patterns: TokenPattern[] = [];
@@ -81,7 +87,11 @@ export const DossierCrossRefText: React.FC<DossierCrossRefTextProps> = ({
 
   const sortedPatterns = Array.from(uniqueMap.values());
   if (sortedPatterns.length === 0) {
-    return <span className={className}>{text}</span>;
+    return (
+      <span className={className}>
+        {renderHighlightedText(text, highlightConfig)}
+      </span>
+    );
   }
 
   const regex = new RegExp(
@@ -95,7 +105,13 @@ export const DossierCrossRefText: React.FC<DossierCrossRefTextProps> = ({
     <span className={className}>
       {parts.map((part, idx) => {
         const matched = uniqueMap.get(part.toLowerCase());
-        if (!matched) return <React.Fragment key={idx}>{part}</React.Fragment>;
+        if (!matched) {
+          return (
+            <React.Fragment key={idx}>
+              {renderHighlightedText(part, highlightConfig)}
+            </React.Fragment>
+          );
+        }
 
         const badgeColor =
           matched.hit.kind === 'evidence'
@@ -121,7 +137,7 @@ export const DossierCrossRefText: React.FC<DossierCrossRefTextProps> = ({
             }`}
             className={`inline border-b border-dotted px-0.5 transition-colors cursor-pointer font-semibold ${badgeColor}`}
           >
-            {part}
+            {renderHighlightedText(part, highlightConfig)}
           </button>
         );
       })}

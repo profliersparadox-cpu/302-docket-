@@ -19,6 +19,7 @@ import { CaseFile, KeyTestimony } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { CaseCourtroomGame } from './CaseCourtroomGame.tsx';
 import { CourtroomSim } from '../CourtroomSim.tsx';
+import { HighlightText } from '../../context/DocumentHighlightContext.tsx';
 
 interface CaseCourtroomViewProps {
   caseData: CaseFile;
@@ -242,8 +243,12 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
               </h4>
             </div>
             <p className="text-xs sm:text-sm font-tech text-zinc-200 leading-relaxed whitespace-pre-line">
-              {caseData.courtroom?.prosecutionArgument ||
-                'The Government presented audited forensic documentation, corroborated witness statements, and physical exhibits establishing material culpability under federal statute.'}
+              <HighlightText
+                text={
+                  caseData.courtroom?.prosecutionArgument ||
+                  'The Government presented audited forensic documentation, corroborated witness statements, and physical exhibits establishing material culpability under federal statute.'
+                }
+              />
             </p>
             <div className="pt-2 border-t border-emerald-950 text-[10px] font-pixel text-emerald-500">
               FOCUS: Satisfying statutory elements through corroborated exhibits
@@ -259,8 +264,12 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
               </h4>
             </div>
             <p className="text-xs sm:text-sm font-tech text-zinc-300 leading-relaxed whitespace-pre-line">
-              {caseData.courtroom?.defenseArgument ||
-                'Defense argued insufficiency of uncorroborated testimony, procedural defects in evidence preservation, and moved to exclude prejudicial assertions lacking direct physical nexus.'}
+              <HighlightText
+                text={
+                  caseData.courtroom?.defenseArgument ||
+                  'Defense argued insufficiency of uncorroborated testimony, procedural defects in evidence preservation, and moved to exclude prejudicial assertions lacking direct physical nexus.'
+                }
+              />
             </p>
             <div className="pt-2 border-t border-red-950 text-[10px] font-pixel text-zinc-400">
               FOCUS: Admissibility hurdles, alternative hypotheses & reasonable doubt
@@ -346,7 +355,7 @@ export const CaseCourtroomView: React.FC<CaseCourtroomViewProps> = ({ caseData }
                         SWORN TESTIMONY TRANSCRIPT (RECORDED ANSWER):
                       </span>
                       <p className="text-zinc-200 font-mono text-xs sm:text-sm leading-relaxed italic">
-                        "{caseData.courtroom.keyTestimonies[selectedExamineIndex || 0].keyPoints}"
+                        &ldquo;<HighlightText text={caseData.courtroom.keyTestimonies[selectedExamineIndex || 0].keyPoints} />&rdquo;
                       </p>
                     </div>
 

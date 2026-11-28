@@ -184,6 +184,34 @@ export interface ArchiveStats {
   categoriesBreakdown: Record<string, number>;
 }
 
+export type SiteThemePreset =
+  | 'phosphor_noir'
+  | 'midnight_bureau'
+  | 'amber_terminal'
+  | 'parchment_dossier'
+  | 'crimson_cold_case';
+
+export type SiteFontStyle = 'tech' | 'typewriter' | 'serif' | 'sans';
+
+export interface SiteCustomization {
+  archiveTitle: string;
+  headerBadge: string;
+  tagline: string;
+  introHeading: string;
+  introBody: string;
+  disclaimer: string;
+  themePreset: SiteThemePreset;
+  accentColor: string;
+  backgroundColor: string;
+  panelColor: string;
+  fontStyle: SiteFontStyle;
+  wallpaperUrl: string;
+  wallpaperOpacity: number;
+  defaultCrtEnabled: boolean;
+  skipBootScreen: boolean;
+  showHeroWatermark: boolean;
+}
+
 export interface ArchiveSettings {
   archiveTitle: string;
   tagline: string;
@@ -192,6 +220,7 @@ export interface ArchiveSettings {
   introBody: string;
   featuredNotice?: string;
   statsOverride?: Partial<ArchiveStats>;
+  customization?: Partial<SiteCustomization>;
 }
 
 export interface AdminUser {
@@ -219,8 +248,9 @@ export interface MediaItem {
 export interface CaseMediaItem {
   id: string;
   title: string;
-  mediaType: 'audio' | 'recording' | 'image' | 'video' | 'wiretap';
+  mediaType: 'audio' | 'recording' | 'image' | 'video' | 'wiretap' | 'document';
   url: string;
+  externalUrl?: string;
   description: string;
   source: string;
   recoveredAt?: string;
@@ -344,6 +374,8 @@ export interface EvidenceBoardItem {
   caseSlug: string;
   caseNumber: string;
   tags: string[];
+  imageUrl?: string;
+  imageCaption?: string;
 }
 
 export interface EvidenceConnection {

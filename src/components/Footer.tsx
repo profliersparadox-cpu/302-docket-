@@ -2,6 +2,7 @@ import React from 'react';
 import { Shield, Lock, ExternalLink, HeartHandshake, PhoneCall } from 'lucide-react';
 import { useArchive } from '../context/ArchiveContext.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useSiteCustomization } from '../context/SiteCustomizationContext.tsx';
 import { soundEngine } from '../utils/soundEngine.ts';
 
 interface FooterProps {
@@ -12,6 +13,7 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onOpenLogin, onOpenMethodology }) => {
   const { settings } = useArchive();
   const { isAuthenticated } = useAuth();
+  const { customization } = useSiteCustomization();
 
   return (
     <footer className="border-t border-[#2d333b] bg-[#07090b] text-zinc-400 font-tech text-xs">
@@ -46,16 +48,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenLogin, onOpenMethodology }
           <div className="md:col-span-2 space-y-2">
             <div className="flex items-center space-x-2">
               <span className="font-pixel font-bold tracking-widest text-zinc-100 text-sm">
-                THE 302 DOCKET
+                {customization.archiveTitle || 'THE 302 DOCKET'}
               </span>
               <span className="retro-stamp text-[8px] py-0 px-1">INDEPENDENT</span>
             </div>
             <p className="text-xs text-zinc-400 max-w-md leading-relaxed">
-              {settings.disclaimer ||
+              {customization.disclaimer ||
+                settings.disclaimer ||
                 'An independent cyber-investigative archive inspired by 1990s law enforcement terminals, Form FD-302 casework, and public judicial records. Not affiliated with the FBI or any law enforcement agency.'}
             </p>
             <p className="font-terminal text-sm text-phosphor">
-              &gt; "Every case leaves a paper trail."
+              &gt; &quot;{customization.tagline || 'Every case leaves a paper trail.'}&quot;
             </p>
           </div>
 
@@ -105,7 +108,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenLogin, onOpenMethodology }
 
         <div className="pt-4 border-t border-[#21262d] flex flex-col sm:flex-row items-center justify-between text-[11px] font-tech text-zinc-500 gap-2">
           <div>
-            &copy; {new Date().getFullYear()} THE 302 DOCKET. All public case records and transcripts cited from official state and federal judicial dockets.
+            &copy; {new Date().getFullYear()} {customization.archiveTitle || 'THE 302 DOCKET'}. All public case records and transcripts cited from official state and federal judicial dockets.
           </div>
           <div
             onDoubleClick={() => {

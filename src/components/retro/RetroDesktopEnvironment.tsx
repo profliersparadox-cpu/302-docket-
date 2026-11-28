@@ -32,10 +32,13 @@ import {
   Filter,
   Scale,
   Gavel,
+  Palette,
 } from 'lucide-react';
 import { CaseFile } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { useArchive } from '../../context/ArchiveContext.tsx';
+import { useSiteCustomization } from '../../context/SiteCustomizationContext.tsx';
+import type { StudioTab } from '../common/CustomizeStudioModal.tsx';
 import { InteractiveTerminalWindow } from './InteractiveTerminalWindow.tsx';
 import { InteractiveEvidenceBoard } from './InteractiveEvidenceBoard.tsx';
 import { InteractiveTimelineRecon } from './InteractiveTimelineRecon.tsx';
@@ -82,6 +85,7 @@ interface RetroDesktopEnvironmentProps {
   onResetFilters?: () => void;
   onOpenTerminal?: () => void;
   onOpenMethodology?: () => void;
+  onOpenStudio?: (tab?: StudioTab) => void;
 }
 
 export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = ({
@@ -103,8 +107,10 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
   onResetFilters,
   onOpenTerminal,
   onOpenMethodology,
+  onOpenStudio,
 }) => {
   const { isBookmarked, toggleBookmark, getCaseProgress } = useArchive();
+  const { customization } = useSiteCustomization();
   // Sound mute state
   const [isMuted, setIsMuted] = useState(soundEngine.isMuted);
 
@@ -116,12 +122,13 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
   // Digital clock
   const [clockStr, setClockStr] = useState('');
 
-  // Green typewriter text for wallpaper motto
+  // Typewriter text for wallpaper motto
   const [typewriterText, setTypewriterText] = useState('');
-  const fullTagline = 'EVERY CASE LEAVES A PAPER TRAIL.';
+  const fullTagline = customization.tagline || 'EVERY CASE LEAVES A PAPER TRAIL.';
 
   useEffect(() => {
     let index = 0;
+    setTypewriterText('');
     const interval = setInterval(() => {
       if (index <= fullTagline.length) {
         setTypewriterText(fullTagline.slice(0, index));
@@ -129,9 +136,9 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
       } else {
         clearInterval(interval);
       }
-    }, 60);
+    }, 45);
     return () => clearInterval(interval);
-  }, []);
+  }, [fullTagline]);
 
   // Covert keyboard shortcut listener for investigator access: Ctrl+Alt+L or Ctrl+Shift+I
   useEffect(() => {
@@ -331,7 +338,8 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
     exercises: { x: 136, y: 324 },
     collectibles: { x: 136, y: 424 },
     secret_folder: { x: 248, y: 24 },
-    shutdown: { x: 248, y: 124 },
+    studio: { x: 248, y: 124 },
+    shutdown: { x: 248, y: 224 },
   };
 
   // Draggable desktop icon positions state (persisted)
@@ -613,6 +621,18 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
       onClick: handleUnlockSecretFolder,
     },
     {
+      id: 'studio',
+      label: 'STUDIO.EXE',
+      icon: <Palette className="w-8 h-8 text-emerald-400" />,
+      sublabel: 'Add Media & Theme',
+      onClick: () =>
+        onOpenStudio
+          ? onOpenStudio('customize')
+          : window.dispatchEvent(
+              new CustomEvent('docket_open_studio', { detail: { tab: 'customize' } })
+            ),
+    },
+    {
       id: 'shutdown',
       label: 'POWER_OFF.EXE',
       icon: <Power className="w-8 h-8 text-red-500" />,
@@ -625,7 +645,8 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
     <div
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      className={`relative w-full h-[calc(100vh-42px)] overflow-hidden bg-[#07090c] text-zinc-300 font-tech select-none flex flex-col ${
+      style={{ backgroundColor: customization.backgroundColor }}
+      className={`relative w-full h-[calc(100vh-42px)] overflow-hidden text-zinc-300 select-none flex flex-col ${
         flickerEnabled ? 'screen-glitch' : ''
       }`}
     >
@@ -637,46 +658,87 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
         }}
         className="relative flex-1 p-6 overflow-hidden bg-[radial-gradient(#151b24_1px,transparent_1px)] [background-size:24px_24px] select-none"
       >
-        {/* Central Bureau Watermark with Green Phosphor Typewriter Text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 px-4 text-center">
-          {/* Covert clearance gateway: double-click shield emblem to authenticate */}
+        {/* Optional Custom Wallpaper Overlay */}
+        {customization.wallpaperUrl && (
           <div
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              soundEngine.playBootBeep();
-              onOpenLogin();
+            className="absolute inset-0 bg-cover bg-center pointer-events-none z-0 transition-opacity duration-300"
+            style={{
+              backgroundImage: `url("${customization.wallpaperUrl}")`,
+              opacity: customization.wallpaperOpacity,
             }}
-            title="Bureau Central Security Hub [Clearance Restricted]"
-            className="w-16 h-16 mb-4 border border-zinc-700/60 bg-zinc-950/80 rounded flex items-center justify-center opacity-30 hover:opacity-80 transition-opacity shadow-inner pointer-events-auto cursor-pointer"
-          >
-            <Shield className="w-9 h-9 text-red-500" />
+          />
+        )}
+
+        {/* Central Bureau Watermark with Customizable Title & Typewriter Text */}
+        {customization.showHeroWatermark && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 px-4 text-center">
+            {/* Covert clearance gateway: double-click shield emblem to authenticate */}
+            <div
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                soundEngine.playBootBeep();
+                onOpenLogin();
+              }}
+              title="Bureau Central Security Hub [Clearance Restricted]"
+              className="w-16 h-16 mb-4 border border-zinc-700/60 bg-zinc-950/80 rounded flex items-center justify-center opacity-30 hover:opacity-80 transition-opacity shadow-inner pointer-events-auto cursor-pointer"
+            >
+              <Shield className="w-9 h-9 text-red-500" />
+            </div>
+            <h1 className="text-4xl sm:text-7xl font-pixel font-bold tracking-widest text-zinc-100/25 mb-4 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+              {customization.archiveTitle || 'THE 302 DOCKET'}
+            </h1>
+            <div className="flex items-center space-x-1.5 font-mono text-sm sm:text-2xl font-bold tracking-wider">
+              <span
+                style={{ color: customization.accentColor }}
+                className="font-pixel text-xs sm:text-base mr-1 opacity-80"
+              >
+                &gt;
+              </span>
+              <span
+                style={{ color: customization.accentColor }}
+                className="font-terminal tracking-widest"
+              >
+                {typewriterText}
+              </span>
+              <span
+                style={{ backgroundColor: customization.accentColor }}
+                className="inline-block w-2.5 sm:w-3.5 h-4 sm:h-6 animate-pulse ml-1"
+              />
+            </div>
+            {/* Covert clearance gateway: click OS version watermark */}
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                soundEngine.playBootBeep();
+                onOpenLogin();
+              }}
+              title="Kernel v4.19"
+              className="text-[10px] sm:text-xs font-mono text-zinc-500/60 hover:text-zinc-400 mt-4 tracking-widest uppercase pointer-events-auto cursor-pointer transition-colors"
+            >
+              {customization.headerBadge || 'FEDERAL BUREAU INVESTIGATIVE ARCHIVE // OS v4.19'}
+            </div>
           </div>
-          <h1 className="text-4xl sm:text-7xl font-pixel font-bold tracking-widest text-zinc-100/25 mb-4 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-            THE 302 DOCKET
-          </h1>
-          <div className="flex items-center space-x-1.5 font-mono text-sm sm:text-2xl font-bold tracking-wider">
-            <span className="text-emerald-500/80 font-pixel text-xs sm:text-base mr-1">&gt;</span>
-            <span className="text-emerald-400 font-terminal drop-shadow-[0_0_12px_rgba(74,222,128,0.8)] tracking-widest">
-              {typewriterText}
-            </span>
-            <span className="inline-block w-2.5 sm:w-3.5 h-4 sm:h-6 bg-emerald-400 animate-pulse ml-1 shadow-[0_0_8px_rgba(74,222,128,0.9)]" />
-          </div>
-          {/* Covert clearance gateway: click OS version watermark */}
-          <div
+        )}
+
+        {/* Desktop Quick Controls: Customize & Add Media + Auto-Align */}
+        <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
+          <button
             onClick={(e) => {
               e.stopPropagation();
-              soundEngine.playBootBeep();
-              onOpenLogin();
+              soundEngine.playKeyClick();
+              if (onOpenStudio) onOpenStudio('add_media');
+              else
+                window.dispatchEvent(
+                  new CustomEvent('docket_open_studio', { detail: { tab: 'add_media' } })
+                );
             }}
-            title="Kernel v4.19"
-            className="text-[10px] sm:text-xs font-mono text-zinc-500/60 hover:text-zinc-400 mt-4 tracking-widest uppercase pointer-events-auto cursor-pointer transition-colors"
+            className="px-2.5 py-1 text-[10px] font-mono bg-amber-950/80 hover:bg-amber-900 border border-amber-600/80 text-amber-200 rounded flex items-center space-x-1.5 shadow-sm transition-colors font-bold"
+            title="Add Videos/Audio or Customize Website Theme"
           >
-            FEDERAL BUREAU INVESTIGATIVE ARCHIVE // OS v4.19
-          </div>
-        </div>
+            <Palette className="w-3 h-3 text-amber-400" />
+            <span className="hidden sm:inline">CUSTOMIZE &amp; MEDIA</span>
+          </button>
 
-        {/* Desktop Quick Control: Auto-Align Apps Button */}
-        <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
           <button
             onClick={handleResetIconPositions}
             className="px-2.5 py-1 text-[10px] font-mono bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-400 hover:text-zinc-200 rounded flex items-center space-x-1.5 shadow-sm transition-colors"
@@ -1121,7 +1183,22 @@ export const RetroDesktopEnvironment: React.FC<RetroDesktopEnvironmentProps> = (
                   className="w-full px-2.5 py-1.5 text-left hover:bg-zinc-800 rounded flex items-center space-x-2 text-zinc-200"
                 >
                   <Shield className="w-4 h-4 text-amber-400" />
-                  <span>Archive Badges & Secrets</span>
+                  <span>Archive Badges &amp; Secrets</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setStartMenuOpen(false);
+                    if (onOpenStudio) onOpenStudio('customize');
+                    else
+                      window.dispatchEvent(
+                        new CustomEvent('docket_open_studio', { detail: { tab: 'customize' } })
+                      );
+                  }}
+                  className="w-full px-2.5 py-1.5 text-left hover:bg-emerald-950/60 rounded flex items-center space-x-2 text-emerald-300 font-bold border border-emerald-900/40"
+                >
+                  <Palette className="w-4 h-4 text-emerald-400" />
+                  <span>Customize &amp; Add Media</span>
                 </button>
 
                 <div className="pt-1 border-t border-zinc-800">

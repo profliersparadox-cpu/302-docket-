@@ -14,10 +14,14 @@ import {
   Database,
   Bookmark,
   Cpu,
+  GitBranch,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { useArchive } from '../../context/ArchiveContext.tsx';
+import { useSiteCustomization } from '../../context/SiteCustomizationContext.tsx';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import type { StudioTab } from '../common/CustomizeStudioModal.tsx';
 
 interface RetroOSDesktopProps {
   currentView: string;
@@ -27,6 +31,8 @@ interface RetroOSDesktopProps {
   crtEnabled: boolean;
   onToggleCrt: () => void;
   onOpenSearch: () => void;
+  onOpenGitHubBackup?: () => void;
+  onOpenStudio?: (tab?: StudioTab) => void;
 }
 
 export const RetroOSDesktop: React.FC<RetroOSDesktopProps> = ({
@@ -37,9 +43,12 @@ export const RetroOSDesktop: React.FC<RetroOSDesktopProps> = ({
   crtEnabled,
   onToggleCrt,
   onOpenSearch,
+  onOpenGitHubBackup,
+  onOpenStudio,
 }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { bookmarks, revealRedactions, setRevealRedactions } = useArchive();
+  const { customization } = useSiteCustomization();
   const [isMuted, setIsMuted] = useState(soundEngine.isMuted);
   const [timeStr, setTimeStr] = useState('');
   const [startMenuOpen, setStartMenuOpen] = useState(false);
@@ -73,14 +82,17 @@ export const RetroOSDesktop: React.FC<RetroOSDesktopProps> = ({
         <div className="flex items-center space-x-2">
           <div
             onDoubleClick={() => handleIconClick(onOpenLogin)}
-            title="THE 302 DOCKET // OS v4.19"
+            title={customization.headerBadge}
             className="px-2 py-0.5 bg-red-950 border border-red-800 text-red-300 font-pixel text-[10px] tracking-wider uppercase cursor-pointer"
           >
-            THE 302 DOCKET // OS v4.19
+            {customization.headerBadge || 'THE 302 DOCKET // OS v4.19'}
           </div>
           <span className="hidden sm:inline text-zinc-600">|</span>
-          <span className="text-emerald-400 font-mono text-[11px] hidden sm:inline drop-shadow-[0_0_6px_rgba(74,222,128,0.6)]">
-            &gt; EVERY CASE LEAVES A PAPER TRAIL.
+          <span
+            style={{ color: customization.accentColor }}
+            className="font-mono text-[11px] hidden sm:inline drop-shadow-[0_0_6px_rgba(74,222,128,0.45)]"
+          >
+            &gt; {customization.tagline || 'EVERY CASE LEAVES A PAPER TRAIL.'}
           </span>
         </div>
 
@@ -130,6 +142,28 @@ export const RetroOSDesktop: React.FC<RetroOSDesktopProps> = ({
             <HelpCircle className="w-3.5 h-3.5" />
             <span className="hidden md:inline">ETHICS.TXT</span>
           </button>
+
+          {onOpenStudio && (
+            <button
+              onClick={() => handleIconClick(() => onOpenStudio('add_media'))}
+              className="px-2.5 py-1 text-xs font-tech flex items-center space-x-1 bg-amber-950/60 border border-amber-600/80 text-amber-200 hover:bg-amber-900/60 hover:text-white font-bold"
+              title="Easily add videos & audio files or customize colors, fonts, title, and wallpaper"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">CUSTOMIZE &amp; MEDIA</span>
+            </button>
+          )}
+
+          {onOpenGitHubBackup && (
+            <button
+              onClick={() => handleIconClick(onOpenGitHubBackup)}
+              className="px-2.5 py-1 text-xs font-tech flex items-center space-x-1 bg-emerald-950/60 border border-emerald-700/80 text-emerald-300 hover:bg-emerald-900/60 hover:text-emerald-100"
+              title="Back up photos & archive data to GitHub using your Personal Access Token"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">GITHUB BACKUP</span>
+            </button>
+          )}
 
           {/* Authenticated Investigator Status */}
           {isAuthenticated && (

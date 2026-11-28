@@ -6,6 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { ArchiveProvider, useArchive } from './context/ArchiveContext.tsx';
+import {
+  SiteCustomizationProvider,
+  useSiteCustomization,
+  FONT_STYLE_MAP,
+} from './context/SiteCustomizationContext.tsx';
 import { RetroOSDesktop } from './components/retro/RetroOSDesktop.tsx';
 import { RetroBootSequence } from './components/retro/RetroBootSequence.tsx';
 import { RetroShutdownSequence } from './components/retro/RetroShutdownSequence.tsx';
@@ -18,12 +23,15 @@ import { BookmarksView } from './components/BookmarksView.tsx';
 import { AdminDashboard } from './components/admin/AdminDashboard.tsx';
 import { LoginModal } from './components/admin/LoginModal.tsx';
 import { MethodologyModal } from './components/MethodologyModal.tsx';
+import { GitHubBackupModal } from './components/common/GitHubBackupModal.tsx';
+import { CustomizeStudioModal, StudioTab } from './components/common/CustomizeStudioModal.tsx';
 import { CaseFile } from './types.ts';
 import { soundEngine } from './utils/soundEngine.ts';
 
 function ArchiveApp() {
   const { isAuthenticated } = useAuth();
   const { stats, refreshStats } = useArchive();
+  const { customization } = useSiteCustomization();
 
   // Boot sequence state (runs on first load in session or unless permanently skipped)
   const [bootCompleted, setBootCompleted] = useState<boolean>(() => {
@@ -57,9 +65,28 @@ function ArchiveApp() {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('');
 
-  // Admin login & methodology modals
+  // Admin login, methodology, GitHub backup & Creator Studio modals
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMethodologyModalOpen, setIsMethodologyModalOpen] = useState(false);
+  const [isGitHubBackupOpen, setIsGitHubBackupOpen] = useState(false);
+  const [studioModal, setStudioModal] = useState<{
+    open: boolean;
+    tab: StudioTab;
+    initialCaseSlug?: string;
+  }>({ open: false, tab: 'add_media' });
+
+  const openStudio = (tab: StudioTab = 'add_media', initialCaseSlug?: string) => {
+    setStudioModal({ open: true, tab, initialCaseSlug });
+  };
+
+  useEffect(() => {
+    const handleOpenStudioEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ tab?: StudioTab; caseSlug?: string }>).detail || {};
+      openStudio(detail.tab || 'add_media', detail.caseSlug);
+    };
+    window.addEventListener('docket_open_studio', handleOpenStudioEvent);
+    return () => window.removeEventListener('docket_open_studio', handleOpenStudioEvent);
+  }, []);
 
   // Cases loaded from DB
   const [cases, setCases] = useState<CaseFile[]>([]);
@@ -182,7 +209,11 @@ function ArchiveApp() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col bg-[#07090b] text-[#d1d5db] font-tech ${
+      style={{
+        backgroundColor: customization.backgroundColor,
+        fontFamily: FONT_STYLE_MAP[customization.fontStyle]?.css || FONT_STYLE_MAP.tech.css,
+      }}
+      className={`min-h-screen flex flex-col text-[#d1d5db] relative ${
         crtEnabled ? 'crt-scanlines crt-vignette' : ''
       }`}
     >
@@ -200,6 +231,8 @@ function ArchiveApp() {
         crtEnabled={crtEnabled}
         onToggleCrt={toggleCrt}
         onOpenSearch={() => setIsTerminalSearchOpen(true)}
+        onOpenGitHubBackup={() => setIsGitHubBackupOpen(true)}
+        onOpenStudio={(tab) => openStudio(tab || 'customize', selectedCaseSlug || undefined)}
       />
 
       {/* Main Viewport */}
@@ -224,6 +257,7 @@ function ArchiveApp() {
             onResetFilters={handleResetFilters}
             onOpenTerminal={() => setIsTerminalSearchOpen(true)}
             onOpenMethodology={() => setIsMethodologyModalOpen(true)}
+            onOpenStudio={(tab) => openStudio(tab || 'customize')}
           />
         )}
 
@@ -295,6 +329,23 @@ function ArchiveApp() {
         isOpen={isMethodologyModalOpen}
         onClose={() => setIsMethodologyModalOpen(false)}
       />
+
+      {/* Website GitHub Token Backup Modal */}
+      <GitHubBackupModal
+        isOpen={isGitHubBackupOpen}
+        onClose={() => setIsGitHubBackupOpen(false)}
+      />
+
+      {/* Creator Studio Modal (Add Video/Audio & Customize Website) */}
+      <CustomizeStudioModal
+        isOpen={studioModal.open}
+        onClose={() => setStudioModal((prev) => ({ ...prev, open: false }))}
+        initialTab={studioModal.tab}
+        initialCaseSlug={studioModal.initialCaseSlug}
+        cases={cases}
+        crtEnabled={crtEnabled}
+        onToggleCrt={toggleCrt}
+      />
     </div>
   );
 }
@@ -303,7 +354,9 @@ export default function App() {
   return (
     <AuthProvider>
       <ArchiveProvider>
-        <ArchiveApp />
+        <SiteCustomizationProvider>
+          <ArchiveApp />
+        </SiteCustomizationProvider>
       </ArchiveProvider>
     </AuthProvider>
   );

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { CaseFile, PersonOfInterest } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { HighlightText } from '../../context/DocumentHighlightContext.tsx';
 
 interface CasePersonsOfInterestViewProps {
   caseData: CaseFile;
@@ -220,15 +221,15 @@ export const CasePersonsOfInterestView: React.FC<CasePersonsOfInterestViewProps>
 
                   {/* Name and Role */}
                   <h4 className="text-base font-bold font-editorial text-zinc-100 group-hover:text-amber-200 transition-colors mb-0.5">
-                    {p.name}
+                    <HighlightText text={p.name} />
                   </h4>
                   <div className="text-xs font-tech text-amber-400 mb-3 font-semibold">
-                    {p.role}
+                    <HighlightText text={p.role} />
                   </div>
 
                   {/* Summary Snippet */}
                   <p className="text-xs text-zinc-300 font-tech leading-relaxed line-clamp-3 mb-3">
-                    {p.background}
+                    <HighlightText text={p.background} />
                   </p>
 
                   {/* Verified Findings Preview */}
@@ -237,7 +238,9 @@ export const CasePersonsOfInterestView: React.FC<CasePersonsOfInterestViewProps>
                       <span className="text-emerald-400 font-pixel text-[9px] block mb-0.5">
                         DOCUMENTED FINDINGS:
                       </span>
-                      <p className="line-clamp-2">{p.verifiedFindings}</p>
+                      <p className="line-clamp-2">
+                        <HighlightText text={p.verifiedFindings} />
+                      </p>
                     </div>
                   )}
                 </div>
@@ -245,7 +248,7 @@ export const CasePersonsOfInterestView: React.FC<CasePersonsOfInterestViewProps>
                 {/* Bottom Action & Outcome */}
                 <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs font-tech">
                   <span className="text-[10px] text-zinc-500 truncate max-w-[150px]">
-                    {p.outcome || p.status}
+                    <HighlightText text={p.outcome || p.status} />
                   </span>
                   <button className="text-amber-400 font-pixel text-[10px] flex items-center group-hover:translate-x-0.5 transition-transform">
                     EXAMINE DOSSIER <Maximize2 className="w-3 h-3 ml-1" />

@@ -17,9 +17,9 @@
   }
 
   body {
-    background-color: #060708;
+    background-color: var(--crt-bg, #060708);
     color: #d1d5db;
-    font-family: var(--font-tech);
+    font-family: var(--docket-body-font, var(--font-tech));
     -webkit-font-smoothing: none;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -77,7 +77,7 @@
 
 /* Retro window styling (1990s OS style) */
 .retro-window {
-  background-color: #121519;
+  background-color: var(--crt-window-bg, #121519);
   border: 2px solid #2d333b;
   box-shadow: 2px 2px 0px #000, -1px -1px 0px #3f4756 inset, 1px 1px 0px #090b0e inset;
 }
@@ -142,7 +142,7 @@
 
 /* Terminal phosphor glow */
 .text-phosphor {
-  color: #4ade80;
+  color: var(--crt-phosphor, #4ade80);
   text-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
 }
 
@@ -292,10 +292,26 @@
 }
 
 /* Dedicated physical print sheet rules */
+@media screen {
+  #retro-print-portal-sheet {
+    display: none !important;
+  }
+}
+
+@page {
+  size: letter;
+  margin: 0.5in;
+}
+
 @media print {
+  html,
   body {
     background: #ffffff !important;
     color: #111111 !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .crt-scanlines::before,
@@ -303,31 +319,50 @@
     display: none !important;
   }
 
-  body.printing-feed-sheet * {
-    visibility: hidden !important;
-  }
-
-  body.printing-feed-sheet #retro-print-feed-sheet,
-  body.printing-feed-sheet #retro-print-feed-sheet * {
-    visibility: visible !important;
-  }
-
-  body.printing-feed-sheet #retro-print-feed-sheet {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 16px !important;
-    background: #ffffff !important;
-    color: #111111 !important;
-    box-shadow: none !important;
-    border: none !important;
-    overflow: visible !important;
-  }
-
-  body.printing-feed-sheet .no-print-feed {
+  body.has-retro-print-portal #root {
     display: none !important;
   }
+
+  body.has-retro-print-portal #retro-print-portal-sheet {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-family: 'Courier Prime', 'Courier New', monospace !important;
+    font-size: 11pt !important;
+    line-height: 1.45 !important;
+  }
+
+  #retro-print-portal-sheet .print-subhead {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  #retro-print-portal-sheet .print-line {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
+
+/* In-document evidentiary text search highlighter */
+.doc-search-match {
+  background-color: rgba(250, 204, 21, 0.28);
+  color: #fef08a;
+  border-bottom: 1.5px solid #f59e0b;
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.doc-search-match-active {
+  background-color: #fbbf24 !important;
+  color: #090b0e !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 12px rgba(251, 191, 36, 0.85);
+}
+
+

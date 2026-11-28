@@ -101,11 +101,11 @@ if (!existingSettings) {
     new Date().toISOString()
   );
 } else {
-  // Ensure branding is updated to THE 302 DOCKET
+  // Only migrate legacy placeholder title if needed; preserve user customizations
   const parsed = JSON.parse(existingSettings.value);
-  if (parsed.archiveTitle !== 'THE 302 DOCKET') {
+  if (!parsed.archiveTitle || parsed.archiveTitle === 'THE ARCHIVE') {
     db.prepare('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?').run(
-      JSON.stringify({ ...parsed, ...defaultSettings }),
+      JSON.stringify({ ...defaultSettings, ...parsed, archiveTitle: 'THE 302 DOCKET' }),
       new Date().toISOString(),
       'archive_settings'
     );
@@ -165,6 +165,58 @@ for (const c of initialCases) {
   );
 }
 console.log(`[Database] Seeded/updated ${initialCases.length} starter cases.`);
+
+// Seed curated case media attachments present in public/assets/aistudio
+const jonBenetPdfDiskPath = path.resolve(
+  process.cwd(),
+  'public',
+  'assets',
+  'aistudio',
+  'JonBenet_Ramsey_Audio_Media_Dossier_c0db7b11.pdf'
+);
+const jonBenetPdfSize = fs.existsSync(jonBenetPdfDiskPath)
+  ? fs.statSync(jonBenetPdfDiskPath).size
+  : 34816;
+
+const jonBenetMediaTranscript = `THE 302 DOCKET · JONBENÉT RAMSEY AUDIO & ARCHIVAL MEDIA DOSSIER
+Case Reference: Boulder, Colorado · December 1996 | Status: Unsolved homicide investigation
+
+01 / AUDIO
+- AUD-001: 911 call recording and transcript (Dec 26, 1996) — Independent archive (https://www.jonbenetramsey.com/evidence/)
+
+02 / VIDEO & PUBLIC BRIEFINGS
+- VID-001: January 3, 1997 media update — Boulder Public Library (Carnegie Library for Local History)
+- VID-002: January 7, 1997 media update — Boulder Public Library
+- VID-003: January 1997 community/media roundtable — Boulder Public Library
+- VID-004: February 13, 1997 media update — Boulder Public Library
+- VID-005: March 6, 1997 media update — Boulder Public Library
+
+03 / OFFICIAL INVESTIGATION UPDATES
+- DOC-001: City of Boulder Homicide Investigation Page & Combined Police Press Releases PDF (https://bouldercolorado.gov/jonbenet-ramsey-homicide)
+
+04 / CASE RECORDS & PHOTOGRAPHIC REFERENCE
+- DOC-002: Colorado Bureau of Investigation — Cold Case Files Entry #275 (https://apps.colorado.gov/apps/coldcase/casedetail.html?id=275)
+- DOC-003: Publicly Collected Reports and Warrants Index (https://www.jonbenetramsey.com/casefiles/)`;
+
+db.prepare(`
+  INSERT OR IGNORE INTO media (
+    id, filename, original_name, mime_type, size, url, uploaded_at,
+    case_slug, case_number, title, transcript, description
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`).run(
+  'media-jonbenet-audio-media-dossier-pdf',
+  'JonBenet_Ramsey_Audio_Media_Dossier_c0db7b11.pdf',
+  'JonBenet_Ramsey_Audio_Media_Dossier_c0db7b11.pdf',
+  'application/pdf',
+  jonBenetPdfSize,
+  '/assets/aistudio/JonBenet_Ramsey_Audio_Media_Dossier_c0db7b11.pdf',
+  '2026-11-25T18:13:57.000Z',
+  'jonbenet-ramsey-boulder',
+  'CASE 001',
+  'JonBenét Ramsey — Audio & Archival Media Dossier (AUD-001 to DOC-003)',
+  jonBenetMediaTranscript,
+  'Curated index of publicly accessible 911 audio, digitized Boulder Public Library media briefings (Jan–Mar 1997), City of Boulder press releases, CBI cold-case listing, and collected case files.'
+);
 
 export const dbService = {
   // Cases
@@ -369,6 +421,11 @@ export const dbService = {
     const existing = db.prepare('SELECT * FROM media WHERE id = ?').get(id) as any;
     if (!existing) return null;
 
+    const filename = updates.filename !== undefined ? updates.filename : existing.filename;
+    const originalName = updates.originalName !== undefined ? updates.originalName : existing.original_name;
+    const mimeType = updates.mimeType !== undefined ? updates.mimeType : existing.mime_type;
+    const size = updates.size !== undefined ? updates.size : existing.size;
+    const url = updates.url !== undefined ? updates.url : existing.url;
     const caseSlug = updates.caseSlug !== undefined ? updates.caseSlug : existing.case_slug;
     const caseNumber = updates.caseNumber !== undefined ? updates.caseNumber : existing.case_number;
     const title = updates.title !== undefined ? updates.title : existing.title;
@@ -377,17 +434,29 @@ export const dbService = {
 
     db.prepare(`
       UPDATE media
-      SET case_slug = ?, case_number = ?, title = ?, transcript = ?, description = ?
+      SET filename = ?, original_name = ?, mime_type = ?, size = ?, url = ?, case_slug = ?, case_number = ?, title = ?, transcript = ?, description = ?
       WHERE id = ?
-    `).run(caseSlug || null, caseNumber || null, title || null, transcript || null, description || null, id);
+    `).run(
+      filename,
+      originalName,
+      mimeType,
+      size,
+      url,
+      caseSlug || null,
+      caseNumber || null,
+      title || null,
+      transcript || null,
+      description || null,
+      id
+    );
 
     return {
       id: existing.id,
-      filename: existing.filename,
-      originalName: existing.original_name,
-      mimeType: existing.mime_type,
-      size: existing.size,
-      url: existing.url,
+      filename,
+      originalName,
+      mimeType,
+      size,
+      url,
       uploadedAt: existing.uploaded_at,
       caseSlug: caseSlug || undefined,
       caseNumber: caseNumber || undefined,

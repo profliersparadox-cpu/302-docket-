@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ArrowLeft,
   Bookmark,
@@ -29,6 +29,7 @@ import {
   Award,
   Compass,
   FileCheck,
+  Upload,
 } from 'lucide-react';
 import { CaseFile, EvidenceItem, PersonOfInterest } from '../types.ts';
 import { useArchive } from '../context/ArchiveContext.tsx';
@@ -46,7 +47,42 @@ import { CaseMediaVaultView } from './case/CaseMediaVaultView.tsx';
 import { RetroPrintFeedModal } from './common/RetroPrintFeedModal.tsx';
 import { DossierCrossRefText, CrossRefHit } from './case/DossierCrossRefText.tsx';
 import { ChapterAuditChallenge } from './case/ChapterAuditChallenge.tsx';
-import { X, BookOpen } from 'lucide-react';
+import { EvidenceTimelineScrubber } from './case/EvidenceTimelineScrubber.tsx';
+import { AudioEvidence } from './case/AudioEvidence.tsx';
+import {
+  DocumentStickyNote,
+  loadStickyNotes,
+  STICKY_NOTES_UPDATED_EVENT,
+} from '../utils/stickyNotes.ts';
+import {
+  SectionStickyTrigger,
+  SectionStickyListAndComposer,
+} from './case/SectionStickyAnchor.tsx';
+import { StickyNotesIndexDrawer } from './case/StickyNotesIndexDrawer.tsx';
+import { X, BookOpen, StickyNote, Highlighter, ClipboardList } from 'lucide-react';
+import {
+  DocumentHighlightProvider,
+  DocumentHighlightConfig,
+  HighlightText,
+  countTermOccurrences,
+} from '../context/DocumentHighlightContext.tsx';
+import {
+  DocumentSearchHighlighterBar,
+  ChapterMatchSummary,
+} from './case/DocumentSearchHighlighterBar.tsx';
+import { WorkBoardSidePanel } from './case/WorkBoardSidePanel.tsx';
+import {
+  loadWorkBoard,
+  addWorkBoardPin,
+  WORK_BOARD_UPDATED_EVENT,
+  DOCKET_PIN_DRAG_MIME,
+} from '../utils/workBoard.ts';
+import { InvestigativeLedgerSidebar } from './case/InvestigativeLedgerSidebar.tsx';
+import {
+  loadInvestigativeLedger,
+  recordLedgerEvent,
+  INVESTIGATIVE_LEDGER_UPDATED_EVENT,
+} from '../utils/investigativeLedger.ts';
 
 interface CaseDetailProps {
   caseSlug: string;
@@ -93,6 +129,344 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
   });
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [activeCrossRef, setActiveCrossRef] = useState<CrossRefHit | null>(null);
+  const [stickyNotes, setStickyNotes] = useState<DocumentStickyNote[]>(() =>
+    loadStickyNotes(caseSlug)
+  );
+  const [showStickyIndex, setShowStickyIndex] = useState(false);
+  const [openStickySectionId, setOpenStickySectionId] = useState<string | null>(null);
+  const [stickySelectionExcerpt, setStickySelectionExcerpt] = useState('');
+  const [requestedDocumentId, setRequestedDocumentId] = useState<string | undefined>(undefined);
+  const [showHighlighter, setShowHighlighter] = useState(false);
+  const [highlightConfig, setHighlightConfig] = useState<DocumentHighlightConfig>({
+    query: '',
+    caseSensitive: false,
+    wholeWord: false,
+    pinnedTerms: [],
+  });
+  const [showWorkBoard, setShowWorkBoard] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('docket_workboard_open') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [workBoardCount, setWorkBoardCount] = useState<number>(() =>
+    loadWorkBoard(caseSlug).pins.length
+  );
+  const [showLedger, setShowLedger] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('docket_ledger_open');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [ledgerCount, setLedgerCount] = useState<number>(() =>
+    loadInvestigativeLedger(caseSlug).length
+  );
+  const [selectionPinPrompt, setSelectionPinPrompt] = useState<{
+    text: string;
+    sourceLabel: string;
+    top: number;
+    left: number;
+  } | null>(null);
+  const dossierHighlightRef = useRef<HTMLDivElement>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  const chapterMatchCounts: ChapterMatchSummary[] = useMemo(() => {
+    if (!caseData || !highlightConfig.query.trim()) return [];
+    const q = highlightConfig.query;
+    const cs = highlightConfig.caseSensitive;
+    const ww = highlightConfig.wholeWord;
+
+    const countText = (parts: (string | undefined | null)[]) =>
+      parts.reduce((sum, p) => sum + countTermOccurrences(p, q, cs, ww), 0);
+
+    return [
+      {
+        chapterIndex: 0,
+        shortLabel: 'CH 01',
+        count: countText([
+          caseData.summary,
+          caseData.overview?.background,
+          caseData.overview?.victimInfo,
+        ]),
+      },
+      {
+        chapterIndex: 1,
+        shortLabel: 'CH 02',
+        count: countText([
+          caseData.incident?.narrative,
+          ...(caseData.incident?.timeline || []).flatMap((t) => [t.title, t.description]),
+        ]),
+      },
+      {
+        chapterIndex: 2,
+        shortLabel: 'CH 03',
+        count: countText([
+          caseData.investigation?.narrative,
+          caseData.investigation?.interviewRecordsSummary,
+          caseData.investigation?.procedureNotes,
+          ...(caseData.investigation?.timeline || []).flatMap((t) => [t.title, t.description]),
+        ]),
+      },
+      {
+        chapterIndex: 3,
+        shortLabel: 'CH 04',
+        count: countText(
+          (caseData.evidence || []).flatMap((e) => [e.title, e.description, e.significance])
+        ),
+      },
+      {
+        chapterIndex: 4,
+        shortLabel: 'CH 05',
+        count: countText(
+          (caseData.personsOfInterest || []).flatMap((p) => [
+            p.name,
+            p.role,
+            p.background,
+            p.verifiedFindings,
+            p.outcome,
+          ])
+        ),
+      },
+      {
+        chapterIndex: 5,
+        shortLabel: 'CH 06',
+        count: countText([
+          caseData.breakthrough?.narrative,
+          ...(caseData.breakthrough?.turningPoints || []).flatMap((tp) => [
+            tp.title,
+            tp.detail,
+            tp.description,
+          ]),
+        ]),
+      },
+      {
+        chapterIndex: 6,
+        shortLabel: 'CH 07',
+        count: countText([
+          caseData.courtroom?.prosecutionArgument,
+          caseData.courtroom?.defenseArgument,
+          ...(caseData.courtroom?.keyTestimonies || []).flatMap((kt) => [kt.witness, kt.keyPoints]),
+        ]),
+      },
+      {
+        chapterIndex: 7,
+        shortLabel: 'CH 08',
+        count: countText([
+          caseData.verdict?.pleaOrVerdict,
+          caseData.verdict?.sentencing,
+          caseData.verdict?.appealsAndRulings,
+          caseData.verdict?.unresolvedLegalQuestions,
+        ]),
+      },
+      {
+        chapterIndex: 8,
+        shortLabel: 'CH 09',
+        count: countText([
+          ...(caseData.aftermath?.legalReforms || []),
+          caseData.aftermath?.institutionalImpact,
+          caseData.aftermath?.victimAdvocacy,
+          caseData.aftermath?.currentStatus,
+        ]),
+      },
+    ];
+  }, [caseData, highlightConfig.query, highlightConfig.caseSensitive, highlightConfig.wholeWord]);
+
+  useEffect(() => {
+    setStickyNotes(loadStickyNotes(caseSlug));
+    setOpenStickySectionId(null);
+    setRequestedDocumentId(undefined);
+    const onStickyUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.caseSlug === caseSlug) {
+        setStickyNotes(loadStickyNotes(caseSlug));
+      }
+    };
+    window.addEventListener(STICKY_NOTES_UPDATED_EVENT, onStickyUpdated);
+    return () => window.removeEventListener(STICKY_NOTES_UPDATED_EVENT, onStickyUpdated);
+  }, [caseSlug]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('docket_workboard_open', showWorkBoard ? 'true' : 'false');
+    } catch {}
+  }, [showWorkBoard]);
+
+  useEffect(() => {
+    setWorkBoardCount(loadWorkBoard(caseSlug).pins.length);
+    const onWorkBoardUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.caseSlug === caseSlug) {
+        setWorkBoardCount(loadWorkBoard(caseSlug).pins.length);
+      }
+    };
+    window.addEventListener(WORK_BOARD_UPDATED_EVENT, onWorkBoardUpdated);
+    return () => window.removeEventListener(WORK_BOARD_UPDATED_EVENT, onWorkBoardUpdated);
+  }, [caseSlug]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('docket_ledger_open', showLedger ? 'true' : 'false');
+    } catch {}
+  }, [showLedger]);
+
+  useEffect(() => {
+    setLedgerCount(loadInvestigativeLedger(caseSlug).length);
+    const onLedgerUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.caseSlug === caseSlug) {
+        setLedgerCount(loadInvestigativeLedger(caseSlug).length);
+      }
+    };
+    window.addEventListener(INVESTIGATIVE_LEDGER_UPDATED_EVENT, onLedgerUpdated);
+    return () => window.removeEventListener(INVESTIGATIVE_LEDGER_UPDATED_EVENT, onLedgerUpdated);
+  }, [caseSlug]);
+
+  useEffect(() => {
+    if (!activeCrossRef || !caseData) return;
+    const subject =
+      activeCrossRef.kind === 'evidence'
+        ? `Exhibit ${activeCrossRef.item.exhibitNumber || ''} · ${activeCrossRef.item.title}`
+        : activeCrossRef.kind === 'poi'
+        ? `Subject: ${activeCrossRef.item.name}`
+        : `Doctrine: ${activeCrossRef.item.term}`;
+    recordLedgerEvent(caseData.slug, {
+      caseNumber: caseData.caseNumber,
+      category: 'document_view',
+      action: 'Cross-Referenced Record',
+      subject,
+      dedupeKey: `xref-${activeCrossRef.kind}-${subject}`,
+    });
+  }, [activeCrossRef, caseData]);
+
+  useEffect(() => {
+    const handleMouseUp = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      if (
+        target.closest('[data-pin-selection-popover="true"]') ||
+        target.closest('aside[aria-label="Persistent Investigator Work Board"]') ||
+        target.closest('input, textarea, select, button')
+      ) {
+        return;
+      }
+
+      const root = mainContentRef.current;
+      if (!root || !root.contains(target)) {
+        setSelectionPinPrompt(null);
+        return;
+      }
+
+      const sel = window.getSelection();
+      const selectedText = sel ? sel.toString().trim() : '';
+      if (!selectedText || selectedText.length < 3 || !sel || sel.rangeCount === 0) {
+        setSelectionPinPrompt(null);
+        return;
+      }
+
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      if (!rect || (rect.width === 0 && rect.height === 0)) {
+        setSelectionPinPrompt(null);
+        return;
+      }
+
+      const chapterTitle = CHAPTERS[activeChapter]?.title || 'Case Dossier';
+      const sourceLabel = showInteractiveSuite
+        ? `${interactiveSuiteView.toUpperCase()} View`
+        : chapterTitle;
+
+      const clampedLeft = Math.min(Math.max(rect.left + rect.width / 2, 110), window.innerWidth - 130);
+      const top = rect.top > 72 ? rect.top - 44 : rect.bottom + 8;
+
+      setSelectionPinPrompt({
+        text: selectedText.slice(0, 600),
+        sourceLabel,
+        top,
+        left: clampedLeft,
+      });
+    };
+
+    const handleClearSelection = () => {
+      const sel = window.getSelection();
+      if (!sel || !sel.toString().trim()) {
+        setSelectionPinPrompt(null);
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('selectionchange', handleClearSelection);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('selectionchange', handleClearSelection);
+    };
+  }, [activeChapter, showInteractiveSuite, interactiveSuiteView]);
+
+  const toggleSectionSticky = (sectionId: string) => {
+    if (openStickySectionId === sectionId) {
+      setOpenStickySectionId(null);
+      setStickySelectionExcerpt('');
+      return;
+    }
+    const sel = window.getSelection()?.toString().trim() || '';
+    setStickySelectionExcerpt(sel.slice(0, 240));
+    setOpenStickySectionId(sectionId);
+  };
+
+  const renderSectionStickyControl = (sectionId: string) => (
+    <SectionStickyTrigger
+      count={stickyNotes.filter((n) => n.sectionId === sectionId).length}
+      isComposerOpen={openStickySectionId === sectionId}
+      onToggleComposer={() => toggleSectionSticky(sectionId)}
+    />
+  );
+
+  const renderSectionStickyBody = (
+    sectionId: string,
+    sectionLabel: string,
+    chapterIndex: number
+  ) => (
+    <SectionStickyListAndComposer
+      caseSlug={caseData ? caseData.slug : caseSlug}
+      caseNumber={caseData ? caseData.caseNumber : ''}
+      targetType="chapter_section"
+      chapterIndex={chapterIndex}
+      sectionId={sectionId}
+      sectionLabel={sectionLabel}
+      notes={stickyNotes.filter((n) => n.sectionId === sectionId)}
+      isComposerOpen={openStickySectionId === sectionId}
+      onCloseComposer={() => setOpenStickySectionId(null)}
+      initialExcerpt={stickySelectionExcerpt}
+    />
+  );
+
+  const handleJumpToStickyNote = (note: DocumentStickyNote) => {
+    setShowStickyIndex(false);
+    if (note.targetType === 'document_section') {
+      setRequestedDocumentId(note.documentId);
+      setInteractiveSuiteView('documents');
+      setShowInteractiveSuite(true);
+      setTimeout(() => {
+        const el = document.querySelector(`[data-sticky-section="${note.sectionId}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+      return;
+    }
+    setShowInteractiveSuite(false);
+    if (typeof note.chapterIndex === 'number') {
+      handleChapterChange(note.chapterIndex);
+    }
+    setTimeout(() => {
+      const el = document.querySelector(`[data-sticky-section="${note.sectionId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -109,6 +483,14 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
           setIsLoading(false);
           markChapterRead(data.id, 0);
           setVisitedStages(new Set([0]));
+          recordLedgerEvent(data.slug, {
+            caseNumber: data.caseNumber,
+            category: 'document_view',
+            action: 'Opened Dossier Chapter',
+            subject: CHAPTERS[0].title,
+            detail: data.title,
+            dedupeKey: `chapter-view-0-${data.slug}`,
+          });
           try {
             const saved = localStorage.getItem(`docket_audits_${caseSlug}`);
             setVerifiedAudits(saved ? new Set<number>(JSON.parse(saved)) : new Set<number>());
@@ -137,6 +519,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
     setVisitedStages((prev) => new Set(prev).add(index));
     if (caseData) {
       markChapterRead(caseData.id, index);
+      recordLedgerEvent(caseData.slug, {
+        caseNumber: caseData.caseNumber,
+        category: 'document_view',
+        action: 'Viewed Dossier Chapter',
+        subject: CHAPTERS[index]?.title || `Chapter ${index + 1}`,
+        dedupeKey: `chapter-view-${index}`,
+      });
     }
     window.scrollTo({ top: 280, behavior: 'smooth' });
   };
@@ -149,6 +538,15 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
       } catch {}
       return next;
     });
+    if (caseData) {
+      recordLedgerEvent(caseData.slug, {
+        caseNumber: caseData.caseNumber,
+        category: 'milestone',
+        action: 'Verified Legal Audit',
+        subject: CHAPTERS[chapterIndex]?.title || `Chapter ${chapterIndex + 1}`,
+        dedupeKey: `audit-verify-${chapterIndex}`,
+      });
+    }
   };
 
   const handleShare = () => {
@@ -247,6 +645,89 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             >
               <Share2 className="w-3.5 h-3.5 mr-1.5" />
               <span className="hidden sm:inline">{copiedLink ? 'COPIED' : 'SHARE'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playKeyClick();
+                setShowStickyIndex((v) => !v);
+              }}
+              className={`retro-btn text-xs font-tech flex items-center ${
+                showStickyIndex || stickyNotes.length > 0
+                  ? 'border-amber-600 text-amber-300'
+                  : 'border-zinc-700 text-zinc-300 hover:border-amber-500'
+              }`}
+              title="View and filter all digital sticky notes placed on this case"
+            >
+              <StickyNote className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+              <span className="hidden sm:inline">NOTES</span>
+              {stickyNotes.length > 0 && (
+                <span className="ml-1 px-1.5 py-0 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] rounded">
+                  {stickyNotes.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playKeyClick();
+                if (showInteractiveSuite) {
+                  setInteractiveSuiteView('documents');
+                } else {
+                  setShowHighlighter((v) => !v);
+                }
+              }}
+              className={`retro-btn text-xs font-tech flex items-center ${
+                showHighlighter || highlightConfig.query.trim() || highlightConfig.pinnedTerms.length > 0
+                  ? 'border-amber-500 text-amber-300'
+                  : 'border-zinc-700 text-zinc-300 hover:border-amber-500'
+              }`}
+              title="Search and highlight terms across evidentiary documents and dossier chapters"
+            >
+              <Highlighter className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+              <span className="hidden sm:inline">HIGHLIGHT</span>
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playKeyClick();
+                setShowWorkBoard((v) => !v);
+              }}
+              className={`retro-btn text-xs font-tech flex items-center ${
+                showWorkBoard || workBoardCount > 0
+                  ? 'border-emerald-600 text-emerald-300'
+                  : 'border-zinc-700 text-zinc-300 hover:border-emerald-500'
+              }`}
+              title="Toggle persistent Work Board side panel for pinning & linking evidence fragments"
+            >
+              <Pin className="w-3.5 h-3.5 mr-1.5 text-red-400" />
+              <span className="hidden sm:inline">WORK BOARD</span>
+              {workBoardCount > 0 && (
+                <span className="ml-1 px-1.5 py-0 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] rounded">
+                  {workBoardCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                soundEngine.playKeyClick();
+                setShowLedger((v) => !v);
+              }}
+              className={`retro-btn text-xs font-tech flex items-center ${
+                showLedger
+                  ? 'border-blue-500 text-blue-300'
+                  : 'border-zinc-700 text-zinc-300 hover:border-blue-500'
+              }`}
+              title="Toggle Investigative Ledger sidebar showing persistent activity log and progress"
+            >
+              <ClipboardList className="w-3.5 h-3.5 mr-1.5 text-blue-400" />
+              <span className="hidden sm:inline">LEDGER</span>
+              {ledgerCount > 0 && (
+                <span className="ml-1 px-1.5 py-0 bg-blue-500/20 border border-blue-500/40 text-blue-300 text-[10px] rounded">
+                  {ledgerCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -456,18 +937,48 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               <Award className="w-3.5 h-3.5 text-emerald-400" />
               <span>DECISION LAB</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.playKeyClick();
+                window.dispatchEvent(
+                  new CustomEvent('docket_open_studio', {
+                    detail: { tab: 'add_media', caseSlug: caseData.slug },
+                  })
+                );
+              }}
+              className="px-2.5 py-1 rounded flex items-center space-x-1 border bg-emerald-950/60 text-emerald-200 border-emerald-700 hover:bg-emerald-900/60 font-bold"
+              title="Add videos or audio files to this case"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-400" />
+              <span>+ VIDEO / AUDIO</span>
+            </button>
           </div>
         </div>
 
-        {/* If Interactive Suite is Active, render CaseInteractiveExperience */}
-        {showInteractiveSuite ? (
-          <CaseInteractiveExperience
-            caseData={caseData}
-            activeView={interactiveSuiteView}
-            onClose={() => setShowInteractiveSuite(false)}
-          />
-        ) : (
-          <>
+        {/* Investigator Sticky Notes Index Drawer (accessible in both dossier and suite views) */}
+        <StickyNotesIndexDrawer
+          isOpen={showStickyIndex}
+          onClose={() => setShowStickyIndex(false)}
+          caseSlug={caseData.slug}
+          notes={stickyNotes}
+          onJumpToNote={handleJumpToStickyNote}
+        />
+
+        {/* Persistent Split Layout: Main Investigation Area + Side-Panel Work Board */}
+        <div className="flex flex-col lg:flex-row items-start gap-6">
+          <div ref={mainContentRef} className="flex-1 min-w-0 w-full space-y-6">
+            {/* If Interactive Suite is Active, render CaseInteractiveExperience */}
+            {showInteractiveSuite ? (
+              <CaseInteractiveExperience
+                caseData={caseData}
+                activeView={interactiveSuiteView}
+                initialDocumentId={requestedDocumentId}
+                onClose={() => setShowInteractiveSuite(false)}
+              />
+            ) : (
+              <>
             {/* Prosecutorial Case Audit Status Banner */}
             <div className="p-3 bg-red-950/30 border border-red-800/70 rounded flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-md">
               <div className="flex items-center space-x-2">
@@ -503,18 +1014,34 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               <span>
                 TIP: Dotted highlights (<span className="border-b border-dotted border-emerald-500 text-emerald-300">Exhibits</span>,{' '}
                 <span className="border-b border-dotted border-red-500 text-red-300">Subjects</span>,{' '}
-                <span className="border-b border-dotted border-amber-500 text-amber-300">Legal Doctrines</span>) are live cross-references. Click any to inspect without leaving your docket.
+                <span className="border-b border-dotted border-amber-500 text-amber-300">Legal Doctrines</span>) are live cross-references. Highlight any passage &amp; click{' '}
+                <strong className="text-amber-300">+ STICKY NOTE</strong> on a section to annotate it.
               </span>
-              {activeCrossRef && (
+              <div className="flex items-center space-x-3">
                 <button
                   type="button"
-                  onClick={() => setActiveCrossRef(null)}
-                  className="text-amber-400 hover:text-amber-200 text-[10px]"
+                  onClick={() => {
+                    soundEngine.playKeyClick();
+                    setShowStickyIndex((v) => !v);
+                  }}
+                  className="text-amber-400 hover:text-amber-200 text-[10px] font-bold flex items-center space-x-1"
                 >
-                  CLEAR INSPECTOR
+                  <StickyNote className="w-3 h-3" />
+                  <span>{showStickyIndex ? 'HIDE STICKY NOTES' : `STICKY NOTES (${stickyNotes.length})`}</span>
                 </button>
-              )}
+                {activeCrossRef && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveCrossRef(null)}
+                    className="text-amber-400 hover:text-amber-200 text-[10px]"
+                  >
+                    CLEAR INSPECTOR
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Cross-reference clear & notes quick-toggle already in strip above */}
 
             {/* Inline Cross-Reference Quick-Inspect Drawer */}
             {activeCrossRef && (
@@ -586,6 +1113,36 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               </div>
             )}
 
+            {/* Interactive Evidence-Dated Chronology Scrubber */}
+            <EvidenceTimelineScrubber
+              caseData={caseData}
+              onInspectEvidence={() => handleChapterChange(3)}
+              onOpenEvidenceBoard={() => {
+                setInteractiveSuiteView('pinboard');
+                setShowInteractiveSuite(true);
+              }}
+            />
+
+            {/* Dedicated MP3 Audio Evidence Waveform Player */}
+            <AudioEvidence caseData={caseData} />
+
+            {/* In-Document Search & Multi-Term Highlighter Bar */}
+            {showHighlighter && (
+              <DocumentSearchHighlighterBar
+                config={highlightConfig}
+                onChange={setHighlightConfig}
+                containerRef={dossierHighlightRef}
+                caseSlug={caseData.slug}
+                caseNumber={caseData.caseNumber}
+                syncKey={activeChapter}
+                placeholder="Search & highlight terms across dossier chapters..."
+                chapterHits={chapterMatchCounts}
+                activeChapter={activeChapter}
+                onSelectChapter={(idx) => handleChapterChange(idx)}
+                onClose={() => setShowHighlighter(false)}
+              />
+            )}
+
             {/* Horizontal Chapter Navigation Bar */}
             <div className="retro-window p-1 overflow-x-auto">
               <div className="flex items-center min-w-max space-x-1">
@@ -614,6 +1171,8 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
         </div>
 
         {/* Active Chapter Container */}
+        <DocumentHighlightProvider value={highlightConfig}>
+          <div ref={dossierHighlightRef} className="space-y-6">
         <div className="retro-window p-6 sm:p-8">
           {/* Chapter 01: Case Introduction */}
           {activeChapter === 0 && (
@@ -631,10 +1190,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-[#0b0e11] p-4 border border-[#21262d]">
-                  <h4 className="font-pixel text-[11px] text-amber-400 uppercase mb-2">
-                    Case Background & Setting
-                  </h4>
+                <div data-sticky-section="ch0-background" className="bg-[#0b0e11] p-4 border border-[#21262d]">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="font-pixel text-[11px] text-amber-400 uppercase">
+                      Case Background & Setting
+                    </h4>
+                    {renderSectionStickyControl('ch0-background')}
+                  </div>
                   <p className="text-xs font-tech text-zinc-300 leading-relaxed mb-3">
                     <DossierCrossRefText
                       text={caseData.overview.background}
@@ -651,12 +1213,16 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       {caseData.overview.initialAlertDate}
                     </div>
                   </div>
+                  {renderSectionStickyBody('ch0-background', 'Sec 01 · Case Background & Setting', 0)}
                 </div>
 
-                <div className="bg-[#0b0e11] p-4 border border-[#21262d]">
-                  <h4 className="font-pixel text-[11px] text-red-400 uppercase mb-2">
-                    Victim Profile & Forensic Scope
-                  </h4>
+                <div data-sticky-section="ch0-victim" className="bg-[#0b0e11] p-4 border border-[#21262d]">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="font-pixel text-[11px] text-red-400 uppercase">
+                      Victim Profile & Forensic Scope
+                    </h4>
+                    {renderSectionStickyControl('ch0-victim')}
+                  </div>
                   <p className="text-xs font-tech text-zinc-300 leading-relaxed mb-3">
                     <DossierCrossRefText
                       text={caseData.overview.victimInfo}
@@ -670,13 +1236,17 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     </span>
                     Documented exclusively from public autopsy findings, coroner dockets, and verified investigatory files.
                   </div>
+                  {renderSectionStickyBody('ch0-victim', 'Sec 01 · Victim Profile & Forensic Scope', 0)}
                 </div>
               </div>
 
-              <div className="bg-[#0b0e11] p-5 border border-[#21262d]">
-                <h3 className="font-pixel text-xs text-zinc-300 uppercase mb-2">
-                  Executive Dossier Synopsis
-                </h3>
+              <div data-sticky-section="ch0-synopsis" className="bg-[#0b0e11] p-5 border border-[#21262d]">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h3 className="font-pixel text-xs text-zinc-300 uppercase">
+                    Executive Dossier Synopsis
+                  </h3>
+                  {renderSectionStickyControl('ch0-synopsis')}
+                </div>
                 <p className="text-xs text-zinc-300 leading-relaxed font-tech whitespace-pre-line">
                   <DossierCrossRefText
                     text={caseData.summary}
@@ -684,6 +1254,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     onInspectRef={setActiveCrossRef}
                   />
                 </p>
+                {renderSectionStickyBody('ch0-synopsis', 'Sec 01 · Executive Dossier Synopsis', 0)}
               </div>
             </div>
           )}
@@ -698,10 +1269,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                 </h2>
               </div>
 
-              <div className="bg-[#0b0e11] p-5 border border-[#21262d]">
-                <h3 className="font-pixel text-[11px] text-amber-400 uppercase mb-2">
-                  Documented Factual Timeline
-                </h3>
+              <div data-sticky-section="ch1-narrative" className="bg-[#0b0e11] p-5 border border-[#21262d]">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h3 className="font-pixel text-[11px] text-amber-400 uppercase">
+                    Documented Factual Timeline
+                  </h3>
+                  {renderSectionStickyControl('ch1-narrative')}
+                </div>
                 <p className="text-xs text-zinc-300 leading-relaxed font-tech whitespace-pre-line">
                   <DossierCrossRefText
                     text={caseData.incident.narrative}
@@ -709,6 +1283,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     onInspectRef={setActiveCrossRef}
                   />
                 </p>
+                {renderSectionStickyBody('ch1-narrative', 'Sec 02 · Documented Factual Timeline', 1)}
               </div>
 
               {/* Vertical Scanned Retro Timeline with loading animation and expanded reports */}
@@ -729,10 +1304,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-[#0b0e11] p-4 border border-[#21262d]">
-                  <h4 className="font-pixel text-[11px] text-amber-400 uppercase mb-2">
-                    Investigative Developments & Field Work
-                  </h4>
+                <div data-sticky-section="ch2-developments" className="bg-[#0b0e11] p-4 border border-[#21262d]">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="font-pixel text-[11px] text-amber-400 uppercase">
+                      Investigative Developments & Field Work
+                    </h4>
+                    {renderSectionStickyControl('ch2-developments')}
+                  </div>
                   <p className="text-xs font-tech text-zinc-300 leading-relaxed whitespace-pre-line">
                     <DossierCrossRefText
                       text={caseData.investigation.narrative}
@@ -740,13 +1318,17 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                       onInspectRef={setActiveCrossRef}
                     />
                   </p>
+                  {renderSectionStickyBody('ch2-developments', 'Sec 03 · Investigative Developments', 2)}
                 </div>
 
                 <div className="space-y-3">
-                  <div className="bg-[#0b0e11] p-4 border border-[#21262d]">
-                    <h4 className="font-pixel text-[11px] text-red-400 uppercase mb-1">
-                      FD-302 Interview Memoranda Summary
-                    </h4>
+                  <div data-sticky-section="ch2-fd302" className="bg-[#0b0e11] p-4 border border-[#21262d]">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h4 className="font-pixel text-[11px] text-red-400 uppercase">
+                        FD-302 Interview Memoranda Summary
+                      </h4>
+                      {renderSectionStickyControl('ch2-fd302')}
+                    </div>
                     <p className="text-xs font-tech text-zinc-400 leading-relaxed">
                       <DossierCrossRefText
                         text={caseData.investigation.interviewRecordsSummary}
@@ -754,12 +1336,16 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                         onInspectRef={setActiveCrossRef}
                       />
                     </p>
+                    {renderSectionStickyBody('ch2-fd302', 'Sec 03 · FD-302 Interview Memoranda', 2)}
                   </div>
 
-                  <div className="bg-[#0b0e11] p-4 border border-[#21262d]">
-                    <h4 className="font-pixel text-[11px] text-zinc-400 uppercase mb-1">
-                      Procedural & Evidence Notes
-                    </h4>
+                  <div data-sticky-section="ch2-procedure" className="bg-[#0b0e11] p-4 border border-[#21262d]">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h4 className="font-pixel text-[11px] text-zinc-400 uppercase">
+                        Procedural & Evidence Notes
+                      </h4>
+                      {renderSectionStickyControl('ch2-procedure')}
+                    </div>
                     <p className="text-xs font-tech text-zinc-400 leading-relaxed">
                       <DossierCrossRefText
                         text={caseData.investigation.procedureNotes}
@@ -767,6 +1353,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                         onInspectRef={setActiveCrossRef}
                       />
                     </p>
+                    {renderSectionStickyBody('ch2-procedure', 'Sec 03 · Procedural & Evidence Notes', 2)}
                   </div>
                 </div>
               </div>
@@ -795,9 +1382,11 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                             </span>
                           )}
                         </div>
-                        <h4 className="font-bold text-sm text-zinc-200 mb-1">{ev.title}</h4>
+                        <h4 className="font-bold text-sm text-zinc-200 mb-1">
+                          <HighlightText text={ev.title} />
+                        </h4>
                         <p className="text-xs text-zinc-400 font-tech leading-relaxed">
-                          {ev.description}
+                          <HighlightText text={ev.description} />
                         </p>
                       </div>
                     ))}
@@ -837,10 +1426,13 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                 </h2>
               </div>
 
-              <div className="bg-[#0b0e11] p-5 border border-[#21262d]">
-                <h3 className="font-pixel text-[11px] text-amber-400 uppercase mb-2">
-                  Turning Point Narrative
-                </h3>
+              <div data-sticky-section="ch5-breakthrough" className="bg-[#0b0e11] p-5 border border-[#21262d]">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h3 className="font-pixel text-[11px] text-amber-400 uppercase">
+                    Turning Point Narrative
+                  </h3>
+                  {renderSectionStickyControl('ch5-breakthrough')}
+                </div>
                 <p className="text-xs text-zinc-300 leading-relaxed font-tech whitespace-pre-line">
                   <DossierCrossRefText
                     text={caseData.breakthrough.narrative}
@@ -848,6 +1440,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                     onInspectRef={setActiveCrossRef}
                   />
                 </p>
+                {renderSectionStickyBody('ch5-breakthrough', 'Sec 06 · Turning Point Narrative', 5)}
               </div>
 
               {caseData.breakthrough.turningPoints && caseData.breakthrough.turningPoints.length > 0 && (
@@ -863,10 +1456,10 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                           {tp.date}
                         </span>
                         <h4 className="font-bold text-sm text-zinc-100 mb-1 font-editorial">
-                          {tp.title}
+                          <HighlightText text={tp.title} />
                         </h4>
                         <p className="text-xs text-zinc-400 font-tech leading-relaxed">
-                          {tp.detail || tp.description}
+                          <HighlightText text={tp.detail || tp.description} />
                         </p>
                       </div>
                     ))}
@@ -898,18 +1491,21 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                 </h2>
               </div>
 
-              <div className="bg-[#0b0e11] p-5 border border-red-900/60">
+              <div data-sticky-section="ch7-verdict" className="bg-[#0b0e11] p-5 border border-red-900/60">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs font-tech">
                   <span className="retro-stamp text-[9px] py-0 px-2">JUDICIAL ORDER</span>
-                  <span className="text-zinc-400">Date: {caseData.verdict.verdictDate}</span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-zinc-400">Date: {caseData.verdict.verdictDate}</span>
+                    {renderSectionStickyControl('ch7-verdict')}
+                  </div>
                 </div>
 
                 <div className="text-base font-bold font-editorial text-zinc-100 mb-1">
-                  {caseData.verdict.pleaOrVerdict}
+                  <HighlightText text={caseData.verdict.pleaOrVerdict} />
                 </div>
 
                 <div className="text-xs font-tech text-amber-400 mb-3 font-bold">
-                  Sentencing / Outcome: {caseData.verdict.sentencing}
+                  Sentencing / Outcome: <HighlightText text={caseData.verdict.sentencing} />
                 </div>
 
                 <div className="pt-3 border-t border-[#21262d] text-xs text-zinc-300 font-tech leading-relaxed">
@@ -925,9 +1521,12 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
 
                 {caseData.verdict.unresolvedLegalQuestions && (
                   <div className="mt-3 p-2.5 bg-black/60 border border-amber-900/50 text-xs text-amber-300 font-tech">
-                    <strong>UNRESOLVED QUESTIONS:</strong> {caseData.verdict.unresolvedLegalQuestions}
+                    <strong>UNRESOLVED QUESTIONS:</strong>{' '}
+                    <HighlightText text={caseData.verdict.unresolvedLegalQuestions} />
                   </div>
                 )}
+
+                {renderSectionStickyBody('ch7-verdict', 'Sec 08 · Judicial Order & Sentencing', 7)}
               </div>
 
               {/* Cold Case Working Theory Lab */}
@@ -950,44 +1549,52 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#0b0e11] p-4 border border-[#21262d]">
-                  <h4 className="font-pixel text-[10px] text-emerald-400 uppercase mb-2">
-                    Legislative & Procedural Reforms
-                  </h4>
+                <div data-sticky-section="ch8-reforms" className="bg-[#0b0e11] p-4 border border-[#21262d]">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="font-pixel text-[10px] text-emerald-400 uppercase">
+                      Legislative & Procedural Reforms
+                    </h4>
+                    {renderSectionStickyControl('ch8-reforms')}
+                  </div>
                   <ul className="space-y-1.5 text-xs font-tech text-zinc-300">
                     {caseData.aftermath.legalReforms.map((lr, i) => (
                       <li key={i} className="flex items-start">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mr-1.5 shrink-0 mt-0.5" />
-                        <span>{lr}</span>
+                        <span>
+                          <HighlightText text={lr} />
+                        </span>
                       </li>
                     ))}
                   </ul>
+                  {renderSectionStickyBody('ch8-reforms', 'Sec 09 · Legislative & Procedural Reforms', 8)}
                 </div>
 
-                <div className="bg-[#0b0e11] p-4 border border-[#21262d] space-y-3">
-                  <div>
-                    <h4 className="font-pixel text-[10px] text-amber-400 uppercase mb-1">
+                <div data-sticky-section="ch8-legacy" className="bg-[#0b0e11] p-4 border border-[#21262d] space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-pixel text-[10px] text-amber-400 uppercase">
                       Institutional & Systemic Legacy
                     </h4>
-                    <p className="text-xs text-zinc-300 font-tech leading-relaxed">
-                      {caseData.aftermath.institutionalImpact}
-                    </p>
+                    {renderSectionStickyControl('ch8-legacy')}
                   </div>
+                  <p className="text-xs text-zinc-300 font-tech leading-relaxed">
+                    <HighlightText text={caseData.aftermath.institutionalImpact} />
+                  </p>
 
                   <div>
                     <h4 className="font-pixel text-[10px] text-red-400 uppercase mb-1">
                       Victim Advocacy & Memorialization
                     </h4>
                     <p className="text-xs text-zinc-300 font-tech leading-relaxed">
-                      {caseData.aftermath.victimAdvocacy}
+                      <HighlightText text={caseData.aftermath.victimAdvocacy} />
                     </p>
                   </div>
+                  {renderSectionStickyBody('ch8-legacy', 'Sec 09 · Institutional & Systemic Legacy', 8)}
                 </div>
               </div>
 
               <div className="bg-[#0b0e11] p-3 border border-[#21262d] text-xs font-tech text-zinc-400">
                 <strong className="text-zinc-200">Current Incarceration / Case Status:</strong>{' '}
-                {caseData.aftermath.currentStatus}
+                <HighlightText text={caseData.aftermath.currentStatus} />
               </div>
             </div>
           )}
@@ -1099,7 +1706,10 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
                 <div key={i} className="flex items-start space-x-2 text-zinc-400">
                   <span className="text-zinc-600 font-mono">[{i + 1}]</span>
                   <div className="flex-1">
-                    <span className="text-zinc-200 font-semibold">{cit.title}</span> &mdash; {cit.source}{' '}
+                    <span className="text-zinc-200 font-semibold">
+                      <HighlightText text={cit.title} />
+                    </span>{' '}
+                    &mdash; <HighlightText text={cit.source} />{' '}
                     {cit.date && <span className="text-zinc-500">({cit.date})</span>}
                   </div>
                 </div>
@@ -1107,9 +1717,107 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({
             </div>
           </div>
         )}
+          </div>
+        </DocumentHighlightProvider>
           </>
         )}
+          </div>
+
+          {(showWorkBoard || showLedger) && (
+            <div className="w-full lg:w-[360px] xl:w-[390px] shrink-0 lg:sticky lg:top-16 lg:self-start z-30 space-y-4 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto pr-0.5">
+              {showWorkBoard && (
+                <WorkBoardSidePanel
+                  caseSlug={caseData.slug}
+                  caseNumber={caseData.caseNumber}
+                  isOpen={showWorkBoard}
+                  onClose={() => setShowWorkBoard(false)}
+                  onOpenFullEvidenceBoard={() => {
+                    soundEngine.playKeyClick();
+                    setInteractiveSuiteView('pinboard');
+                    setShowInteractiveSuite(true);
+                  }}
+                />
+              )}
+
+              {showLedger && (
+                <InvestigativeLedgerSidebar
+                  caseSlug={caseData.slug}
+                  caseNumber={caseData.caseNumber}
+                  caseTitle={caseData.title}
+                  isOpen={showLedger}
+                  chaptersReadCount={visitedStages.size}
+                  auditsVerifiedCount={verifiedAudits.size}
+                  onClose={() => setShowLedger(false)}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Floating Clickable & Draggable 'Pin to Board' Selection Pill */}
+      {selectionPinPrompt && (
+        <div
+          data-pin-selection-popover="true"
+          style={{
+            top: `${selectionPinPrompt.top}px`,
+            left: `${selectionPinPrompt.left}px`,
+            transform: 'translateX(-50%)',
+          }}
+          className="fixed z-50 flex items-center space-x-1.5 bg-[#0b1017] border-2 border-amber-500 rounded px-2 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.85)] font-mono text-[11px]"
+        >
+          <button
+            type="button"
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(
+                DOCKET_PIN_DRAG_MIME,
+                JSON.stringify({
+                  text: selectionPinPrompt.text,
+                  sourceLabel: selectionPinPrompt.sourceLabel,
+                  kind: 'fragment',
+                  tone: 'amber',
+                })
+              );
+              e.dataTransfer.setData('text/plain', selectionPinPrompt.text);
+              e.dataTransfer.effectAllowed = 'copy';
+              if (!showWorkBoard) {
+                setShowWorkBoard(true);
+              }
+            }}
+            onClick={() => {
+              soundEngine.playBootBeep();
+              addWorkBoardPin(caseData.slug, {
+                caseNumber: caseData.caseNumber,
+                text: selectionPinPrompt.text,
+                sourceLabel: selectionPinPrompt.sourceLabel,
+                kind: 'fragment',
+                tone: 'amber',
+              });
+              setShowWorkBoard(true);
+              setSelectionPinPrompt(null);
+              window.getSelection()?.removeAllRanges();
+            }}
+            className="flex items-center space-x-1.5 text-amber-300 hover:text-emerald-300 font-bold cursor-grab active:cursor-grabbing"
+            title="Click to pin fragment or drag directly onto Work Board"
+          >
+            <Pin className="w-3.5 h-3.5 text-red-500" />
+            <span>PIN TO BOARD</span>
+          </button>
+          <span className="text-zinc-600">|</span>
+          <span className="text-[10px] text-zinc-400 max-w-[120px] truncate hidden sm:inline">
+            &ldquo;{selectionPinPrompt.text}&rdquo;
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectionPinPrompt(null)}
+            className="text-zinc-500 hover:text-zinc-200 pl-0.5"
+            aria-label="Dismiss Pin to Board"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
 
       {/* Minimalist Retro Tractor-Feed Physical Print Dialog */}
       <RetroPrintFeedModal

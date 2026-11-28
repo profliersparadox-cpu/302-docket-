@@ -84,6 +84,68 @@ router.post('/media/upload', upload.single('file'), (req: Request, res: Response
   return res.status(201).json(mediaItem);
 });
 
+// Investigator / User: POST /api/media/link (Add external video/audio URL such as MP4, MP3, YouTube, Vimeo)
+router.post('/media/link', (req: Request, res: Response) => {
+  const { url, mediaKind, caseSlug, caseNumber, title, transcript, description } = req.body || {};
+  if (!url || typeof url !== 'string' || !url.trim()) {
+    return res.status(400).json({ error: 'A valid media URL is required.' });
+  }
+
+  const trimmedUrl = url.trim();
+  const isAudio = mediaKind === 'audio' || /\.(mp3|wav|m4a|ogg|aac|flac)(\?|#|$)/i.test(trimmedUrl);
+  const mimeType = isAudio ? 'audio/mpeg' : 'video/mp4';
+
+  const mediaItem: MediaItem = {
+    id: 'media-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+    filename: trimmedUrl,
+    originalName: title?.trim() || trimmedUrl.split('/').pop()?.split('?')[0] || (isAudio ? 'external-audio.mp3' : 'external-video.mp4'),
+    mimeType,
+    size: 0,
+    url: trimmedUrl,
+    uploadedAt: new Date().toISOString(),
+    caseSlug: caseSlug || undefined,
+    caseNumber: caseNumber || undefined,
+    title: title?.trim() || (isAudio ? 'Linked Audio Exhibit' : 'Linked Video Exhibit'),
+    transcript: transcript || undefined,
+    description: description || undefined,
+  };
+
+  dbService.saveMedia(mediaItem);
+  return res.status(201).json(mediaItem);
+});
+
+// Investigator / User: PATCH /api/media/:id (Edit custom uploaded/linked media metadata)
+router.patch('/media/:id', (req: Request, res: Response) => {
+  const existing = dbService.getAllMedia().find((m) => m.id === req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Media asset not found.' });
+  }
+  const updated = dbService.updateMedia(req.params.id, req.body);
+  return res.json(updated);
+});
+
+// Investigator / User: DELETE /api/media/:id (Delete user-added media item)
+router.delete('/media/:id', (req: Request, res: Response) => {
+  if (!req.params.id.startsWith('media-')) {
+    return res.status(403).json({ error: 'Protected archive asset requires admin clearance.' });
+  }
+  const result = dbService.deleteMedia(req.params.id);
+  if (!result.success) {
+    return res.status(404).json({ error: 'Media asset not found.' });
+  }
+  if (result.filename && !result.filename.startsWith('http://') && !result.filename.startsWith('https://')) {
+    const filePath = path.resolve(UPLOADS_DIR, path.basename(result.filename));
+    if (filePath.startsWith(UPLOADS_DIR + path.sep) && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.error('Failed to unlink file on disk:', err);
+      }
+    }
+  }
+  return res.json({ message: 'Media record deleted.' });
+});
+
 // Admin: GET /api/admin/media
 router.get('/admin/media', requireAdminAuth, (req: Request, res: Response) => {
   const caseSlug = req.query.caseSlug as string | undefined;
@@ -136,6 +198,47 @@ router.put('/admin/media/:id', requireAdminAuth, (req: Request, res: Response) =
   return res.json(updated);
 });
 
+// Admin: PUT /api/admin/media/:id/image (Replace image file after photo editor adjustments)
+router.put('/admin/media/:id/image', requireAdminAuth, upload.single('file'), (req: Request, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No edited image file received.' });
+  }
+
+  const existing = dbService.getAllMedia().find((m) => m.id === req.params.id);
+  if (!existing) {
+    // Clean up orphaned upload safely
+    const orphanPath = path.resolve(UPLOADS_DIR, path.basename(req.file.filename));
+    if (orphanPath.startsWith(UPLOADS_DIR + path.sep) && fs.existsSync(orphanPath)) {
+      fs.unlinkSync(orphanPath);
+    }
+    return res.status(404).json({ error: 'Media asset not found.' });
+  }
+
+  const oldFilename = existing.filename;
+  const updated = dbService.updateMedia(req.params.id, {
+    filename: req.file.filename,
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+    url: `/uploads/${req.file.filename}`,
+    title: req.body.title?.trim() || existing.title,
+    description: req.body.description?.trim() || existing.description,
+  });
+
+  if (oldFilename && oldFilename !== req.file.filename) {
+    const oldPath = path.resolve(UPLOADS_DIR, path.basename(oldFilename));
+    if (oldPath.startsWith(UPLOADS_DIR + path.sep) && fs.existsSync(oldPath)) {
+      try {
+        fs.unlinkSync(oldPath);
+      } catch (err) {
+        console.error('Failed to clean up previous image file:', err);
+      }
+    }
+  }
+
+  return res.json(updated);
+});
+
 // Admin: DELETE /api/admin/media/:id
 router.delete('/admin/media/:id', requireAdminAuth, (req: Request, res: Response) => {
   const result = dbService.deleteMedia(req.params.id);
@@ -144,8 +247,8 @@ router.delete('/admin/media/:id', requireAdminAuth, (req: Request, res: Response
   }
 
   if (result.filename) {
-    const filePath = path.join(UPLOADS_DIR, result.filename);
-    if (fs.existsSync(filePath)) {
+    const filePath = path.resolve(UPLOADS_DIR, path.basename(result.filename));
+    if (filePath.startsWith(UPLOADS_DIR + path.sep) && fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
       } catch (err) {

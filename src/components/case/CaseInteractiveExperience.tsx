@@ -59,21 +59,86 @@ import {
   convertMediaToDocument,
   MEDIA_UPDATED_EVENT,
 } from '../../utils/mediaVault.ts';
-import { Printer, Scale, BookOpen, X } from 'lucide-react';
+import { Printer, Scale, BookOpen, X, StickyNote } from 'lucide-react';
+import {
+  DocumentStickyNote,
+  loadStickyNotes,
+  STICKY_NOTES_UPDATED_EVENT,
+} from '../../utils/stickyNotes.ts';
+import {
+  SectionStickyTrigger,
+  SectionStickyListAndComposer,
+} from './SectionStickyAnchor.tsx';
+import {
+  DocumentHighlightProvider,
+  DocumentHighlightConfig,
+  HighlightText,
+} from '../../context/DocumentHighlightContext.tsx';
+import { DocumentSearchHighlighterBar } from './DocumentSearchHighlighterBar.tsx';
+import { recordLedgerEvent } from '../../utils/investigativeLedger.ts';
 
 interface CaseInteractiveExperienceProps {
   caseData: CaseFile;
   activeView?: 'pinboard' | 'timeline' | 'documents' | 'interviews' | 'exercise' | 'media' | 'radar';
+  initialDocumentId?: string;
   onClose?: () => void;
 }
 
 export const CaseInteractiveExperience: React.FC<CaseInteractiveExperienceProps> = ({
   caseData,
   activeView: initialView = 'pinboard',
+  initialDocumentId,
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'pinboard' | 'timeline' | 'documents' | 'interviews' | 'exercise' | 'media' | 'radar'>(initialView);
   const [uploadedCaseMedia, setUploadedCaseMedia] = useState<MediaItem[]>([]);
+  const [docStickyNotes, setDocStickyNotes] = useState<DocumentStickyNote[]>(() =>
+    loadStickyNotes(caseData.slug)
+  );
+  const [openDocSectionComposer, setOpenDocSectionComposer] = useState<string | null>(null);
+  const [docComposerExcerpt, setDocComposerExcerpt] = useState<string>('');
+  const [docHighlightConfig, setDocHighlightConfig] = useState<DocumentHighlightConfig>({
+    query: '',
+    caseSensitive: false,
+    wholeWord: false,
+    pinnedTerms: [],
+  });
+  const docReadingPaneRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setActiveTab(initialView);
+  }, [initialView]);
+
+  useEffect(() => {
+    const tabLabels: Record<string, string> = {
+      pinboard: 'Evidence Pinboard',
+      timeline: 'Chrono Recon Timeline',
+      documents: 'Case Documents Room',
+      interviews: 'Interview & Testimony Tapes',
+      exercise: 'Investigative Decision Lab',
+      media: 'Media Vault',
+      radar: 'Spatial Radar',
+    };
+    recordLedgerEvent(caseData.slug, {
+      caseNumber: caseData.caseNumber,
+      category: 'document_view',
+      action: 'Opened Workspace View',
+      subject: tabLabels[activeTab] || activeTab,
+      dedupeKey: `suite-tab-${activeTab}`,
+    });
+  }, [activeTab, caseData.slug, caseData.caseNumber]);
+
+  useEffect(() => {
+    setDocStickyNotes(loadStickyNotes(caseData.slug));
+    const onStickyUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.caseSlug === caseData.slug) {
+        setDocStickyNotes(loadStickyNotes(caseData.slug));
+      }
+    };
+    window.addEventListener(STICKY_NOTES_UPDATED_EVENT, onStickyUpdate);
+    return () => window.removeEventListener(STICKY_NOTES_UPDATED_EVENT, onStickyUpdate);
+  }, [caseData.slug]);
 
   useEffect(() => {
     const loadCaseMedia = async () => {
@@ -378,10 +443,27 @@ ${caseData.verdict.appealsAndRulings}`,
     return docs;
   }, [caseData, uploadedCaseMedia]);
 
-  const [selectedDocId, setSelectedDocId] = useState<string>(caseDocuments[0]?.id || '');
+  const [selectedDocId, setSelectedDocId] = useState<string>(initialDocumentId || caseDocuments[0]?.id || '');
   const [docZoom, setDocZoom] = useState<number>(100);
   const [revealDocRedactions, setRevealDocRedactions] = useState<boolean>(false);
   const activeDocument = caseDocuments.find((d) => d.id === selectedDocId) || caseDocuments[0];
+
+  useEffect(() => {
+    if (initialDocumentId) {
+      setSelectedDocId(initialDocumentId);
+    }
+  }, [initialDocumentId]);
+
+  const toggleDocSectionSticky = (sectionId: string) => {
+    if (openDocSectionComposer === sectionId) {
+      setOpenDocSectionComposer(null);
+      setDocComposerExcerpt('');
+      return;
+    }
+    const sel = window.getSelection()?.toString().trim() || '';
+    setDocComposerExcerpt(sel.slice(0, 240));
+    setOpenDocSectionComposer(sectionId);
+  };
 
   // --------------------------------------------------------------------------
   // 4. INTERVIEWS & TRANSCRIPTS STATE
@@ -517,6 +599,18 @@ ${caseData.verdict.appealsAndRulings}`,
   const [coldCaseLabMode, setColdCaseLabMode] = useState<'theory' | 'precedent'>('precedent');
   const [docCrossRef, setDocCrossRef] = useState<CrossRefHit | null>(null);
   const [printDocOpen, setPrintDocOpen] = useState(false);
+
+  const printDocumentOverride = React.useMemo(() => {
+    if (!activeDocument) return null;
+    return {
+      title: activeDocument.title,
+      classification: activeDocument.classification,
+      date: activeDocument.date,
+      agency: activeDocument.authorOrAgency,
+      body: activeDocument.documentBody,
+      citation: activeDocument.officialCitation,
+    };
+  }, [activeDocument]);
 
   return (
     <div className="w-full bg-[#0a0d12] border-2 border-zinc-800 rounded-lg shadow-2xl flex flex-col overflow-hidden text-zinc-300 font-tech">
@@ -666,6 +760,14 @@ ${caseData.verdict.appealsAndRulings}`,
                   onClick={() => {
                     soundEngine.playFileAccess();
                     setSelectedDocId(doc.id);
+                    recordLedgerEvent(caseData.slug, {
+                      caseNumber: caseData.caseNumber,
+                      category: 'document_view',
+                      action: 'Viewed Document',
+                      subject: doc.title,
+                      detail: doc.classification,
+                      dedupeKey: `doc-view-${doc.id}`,
+                    });
                   }}
                   className={`w-full p-2.5 text-left rounded border font-mono text-xs transition-colors flex flex-col space-y-1 ${
                     doc.id === activeDocument.id
@@ -680,34 +782,61 @@ ${caseData.verdict.appealsAndRulings}`,
             </div>
 
             {/* Document Reading View */}
-            <div className="flex-1 p-6 overflow-y-auto bg-zinc-950 flex flex-col space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3 font-mono text-xs">
-                <span className="text-amber-400 font-bold">{activeDocument.title}</span>
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundEngine.playKeyClick();
-                      setPrintDocOpen(true);
-                    }}
-                    className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 rounded flex items-center space-x-1.5"
-                    title="Print document on retro physical feed"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>FEED PRINT</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      soundEngine.playKeyClick();
-                      setRevealDocRedactions((prev) => !prev);
-                    }}
-                    className="px-2.5 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded flex items-center space-x-1.5"
-                  >
-                    {revealDocRedactions ? <Eye className="w-3.5 h-3.5 text-red-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>{revealDocRedactions ? 'REDACTIONS: VISIBLE' : 'REDACTIONS: MASKED'}</span>
-                  </button>
+            <DocumentHighlightProvider value={docHighlightConfig}>
+              <div
+                ref={docReadingPaneRef}
+                className="flex-1 p-6 overflow-y-auto bg-zinc-950 flex flex-col space-y-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3 font-mono text-xs">
+                  <span className="text-amber-400 font-bold">{activeDocument.title}</span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playKeyClick();
+                        setPrintDocOpen(true);
+                      }}
+                      className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 rounded flex items-center space-x-1.5"
+                      title="Print document on retro physical feed"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>FEED PRINT</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        soundEngine.playKeyClick();
+                        setRevealDocRedactions((prev) => {
+                          const next = !prev;
+                          if (next) {
+                            recordLedgerEvent(caseData.slug, {
+                              caseNumber: caseData.caseNumber,
+                              category: 'milestone',
+                              action: 'Unsealed Redactions',
+                              subject: activeDocument.title,
+                              dedupeKey: `unseal-doc-${activeDocument.id}`,
+                            });
+                          }
+                          return next;
+                        });
+                      }}
+                      className="px-2.5 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded flex items-center space-x-1.5"
+                    >
+                      {revealDocRedactions ? <Eye className="w-3.5 h-3.5 text-red-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      <span>{revealDocRedactions ? 'REDACTIONS: VISIBLE' : 'REDACTIONS: MASKED'}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+
+                {/* In-Document Search & Multi-Term Highlighter */}
+                <DocumentSearchHighlighterBar
+                  config={docHighlightConfig}
+                  onChange={setDocHighlightConfig}
+                  containerRef={docReadingPaneRef}
+                  caseSlug={caseData.slug}
+                  caseNumber={caseData.caseNumber}
+                  syncKey={`${activeDocument.id}-${revealDocRedactions}`}
+                  placeholder={`Search & highlight terms inside ${activeDocument.title}...`}
+                />
 
               {docCrossRef && (
                 <div className="p-3.5 bg-[#0a0f16] border border-amber-600/80 rounded space-y-1.5 text-xs font-mono">
@@ -746,34 +875,123 @@ ${caseData.verdict.appealsAndRulings}`,
               )}
 
               {activeDocument.downloadUrl && isPdfMedia({ url: activeDocument.downloadUrl, originalName: activeDocument.title }) ? (
-                <RetroPdfViewer
-                  key={activeDocument.id}
-                  url={activeDocument.downloadUrl}
-                  title={activeDocument.title}
-                  caseNumber={activeDocument.caseNumber}
-                  classification={activeDocument.classification}
-                  date={activeDocument.date}
-                  authorOrAgency={activeDocument.authorOrAgency}
-                  description={activeDocument.summary}
-                  transcript={activeDocument.documentBody}
-                />
+                <div className="space-y-4">
+                  <RetroPdfViewer
+                    key={activeDocument.id}
+                    url={activeDocument.downloadUrl}
+                    title={activeDocument.title}
+                    caseNumber={activeDocument.caseNumber}
+                    classification={activeDocument.classification}
+                    date={activeDocument.date}
+                    authorOrAgency={activeDocument.authorOrAgency}
+                    description={activeDocument.summary}
+                    transcript={activeDocument.documentBody}
+                  />
+                  {(() => {
+                    const pdfSectionId = `doc-${activeDocument.id}-pdf`;
+                    const pdfSectionLabel = `${activeDocument.title} (PDF Record)`;
+                    const pdfNotes = docStickyNotes.filter((n) => n.sectionId === pdfSectionId);
+                    return (
+                      <div data-sticky-section={pdfSectionId} className="bg-[#0b0e12] border border-zinc-800 rounded p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-pixel text-[10px] text-amber-400 uppercase flex items-center space-x-1.5">
+                            <StickyNote className="w-3.5 h-3.5" />
+                            <span>DOCUMENT STICKY NOTES &amp; ANNOTATIONS</span>
+                          </span>
+                          <SectionStickyTrigger
+                            count={pdfNotes.length}
+                            isComposerOpen={openDocSectionComposer === pdfSectionId}
+                            onToggleComposer={() => toggleDocSectionSticky(pdfSectionId)}
+                          />
+                        </div>
+                        <SectionStickyListAndComposer
+                          caseSlug={caseData.slug}
+                          caseNumber={caseData.caseNumber}
+                          targetType="document_section"
+                          documentId={activeDocument.id}
+                          sectionId={pdfSectionId}
+                          sectionLabel={pdfSectionLabel}
+                          notes={pdfNotes}
+                          isComposerOpen={openDocSectionComposer === pdfSectionId}
+                          onCloseComposer={() => setOpenDocSectionComposer(null)}
+                          initialExcerpt={docComposerExcerpt}
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
               ) : (
                 <>
-                  <div className="bg-[#0b0e12] border border-zinc-800 rounded p-6 font-typewriter text-xs text-zinc-300 leading-relaxed whitespace-pre-line shadow-inner">
-                    <DossierCrossRefText
-                      text={activeDocument.documentBody}
-                      caseData={caseData}
-                      onInspectRef={setDocCrossRef}
-                    />
+                  <div className="bg-[#0b0e12] border border-zinc-800 rounded p-5 font-typewriter text-xs text-zinc-300 leading-relaxed shadow-inner space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-zinc-800/80 text-[10px] font-mono text-zinc-400">
+                      <span>
+                        Highlight text or click <strong className="text-amber-300">+ STICKY NOTE</strong> on any document section below to place an annotation.
+                      </span>
+                      <span className="text-amber-400">
+                        {docStickyNotes.filter((n) => n.documentId === activeDocument.id).length} notes on this document
+                      </span>
+                    </div>
+
+                    {activeDocument.documentBody
+                      .split(/\n{2,}/)
+                      .map((chunk) => chunk.trim())
+                      .filter(Boolean)
+                      .map((sectionText, idx) => {
+                        const secId = `doc-${activeDocument.id}-sec-${idx}`;
+                        const firstLine = sectionText.split('\n')[0].slice(0, 48);
+                        const secLabel = `${activeDocument.title.slice(0, 32)} · Sec ${idx + 1} (${firstLine})`;
+                        const secNotes = docStickyNotes.filter((n) => n.sectionId === secId);
+
+                        return (
+                          <div
+                            key={secId}
+                            data-sticky-section={secId}
+                            className="p-3 bg-black/35 border border-zinc-800/70 hover:border-zinc-700 rounded transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                                SECTION {String(idx + 1).padStart(2, '0')}
+                              </span>
+                              <SectionStickyTrigger
+                                count={secNotes.length}
+                                isComposerOpen={openDocSectionComposer === secId}
+                                onToggleComposer={() => toggleDocSectionSticky(secId)}
+                              />
+                            </div>
+                            <div className="whitespace-pre-line">
+                              <DossierCrossRefText
+                                text={sectionText}
+                                caseData={caseData}
+                                onInspectRef={setDocCrossRef}
+                              />
+                            </div>
+                            <SectionStickyListAndComposer
+                              caseSlug={caseData.slug}
+                              caseNumber={caseData.caseNumber}
+                              targetType="document_section"
+                              documentId={activeDocument.id}
+                              sectionId={secId}
+                              sectionLabel={secLabel}
+                              notes={secNotes}
+                              isComposerOpen={openDocSectionComposer === secId}
+                              onCloseComposer={() => setOpenDocSectionComposer(null)}
+                              initialExcerpt={docComposerExcerpt}
+                            />
+                          </div>
+                        );
+                      })}
                   </div>
 
                   {activeDocument.redactions && activeDocument.redactions.length > 0 && (
                     <div className="p-3 bg-zinc-900/70 border border-zinc-800 rounded text-xs font-mono space-y-1">
                       {activeDocument.redactions.map((red) => (
                         <div key={red.id} className="text-zinc-400">
-                          <span className="text-red-400 font-bold">[{red.label}]</span> {red.reason}
+                          <span className="text-red-400 font-bold">[{red.label}]</span>{' '}
+                          <HighlightText text={red.reason} />
                           {revealDocRedactions && (
-                            <span className="block text-red-300 italic mt-0.5">{red.redactedText}</span>
+                            <span className="block text-red-300 italic mt-0.5">
+                              <HighlightText text={red.redactedText} />
+                            </span>
                           )}
                         </div>
                       ))}
@@ -781,11 +999,12 @@ ${caseData.verdict.appealsAndRulings}`,
                   )}
 
                   <div className="text-xs font-mono text-zinc-500 border-t border-zinc-900 pt-2">
-                    CITING RECORD: {activeDocument.officialCitation}
+                    CITING RECORD: <HighlightText text={activeDocument.officialCitation} />
                   </div>
                 </>
               )}
-            </div>
+              </div>
+            </DocumentHighlightProvider>
           </div>
         )}
 
@@ -936,14 +1155,7 @@ ${caseData.verdict.appealsAndRulings}`,
           caseData={caseData}
           isOpen={printDocOpen}
           onClose={() => setPrintDocOpen(false)}
-          documentOverride={{
-            title: activeDocument.title,
-            classification: activeDocument.classification,
-            date: activeDocument.date,
-            agency: activeDocument.authorOrAgency,
-            body: activeDocument.documentBody,
-            citation: activeDocument.officialCitation,
-          }}
+          documentOverride={printDocumentOverride}
         />
       )}
     </div>

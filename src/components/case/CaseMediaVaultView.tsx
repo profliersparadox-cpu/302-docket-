@@ -14,15 +14,30 @@ import {
   Play,
   Upload,
   AlertCircle,
+  ExternalLink,
+  Archive,
+  Sliders,
+  GitBranch,
+  Link as LinkIcon,
+  Trash2,
+  Film,
+  Music,
+  Plus,
 } from 'lucide-react';
 import { CaseFile, CaseMediaItem } from '../../types.ts';
 import { soundEngine } from '../../utils/soundEngine.ts';
 import { archiveInterviewRecords } from '../../data/archiveVaultData.ts';
 import { RetroAudioPlayer } from '../common/RetroAudioPlayer.tsx';
+import { RetroVideoPlayer } from '../common/RetroVideoPlayer.tsx';
 import { RetroPdfViewer } from '../common/RetroPdfViewer.tsx';
+import { RetroPhotoEditor } from '../common/RetroPhotoEditor.tsx';
+import { GitHubBackupModal } from '../common/GitHubBackupModal.tsx';
+import { PRESET_EXHIBIT_PLATES } from '../../data/exhibitImages.ts';
 import {
   fetchAllMedia,
   uploadMediaFile,
+  addMediaLink,
+  deleteCustomMedia,
   isAudioMedia,
   isPdfMedia,
   isVideoMedia,
@@ -40,19 +55,27 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Upload modal state
+  // Upload modal & quick drop state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDesc, setUploadDesc] = useState('');
   const [uploadTranscript, setUploadTranscript] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkKind, setLinkKind] = useState<'video' | 'audio'>('video');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDropActive, setIsDropActive] = useState(false);
 
   // Transcript state & modal
   const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
   const [transcriptDraft, setTranscriptDraft] = useState('');
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
+
+  // Photo editor & GitHub backup modals
+  const [editingPhotoMedia, setEditingPhotoMedia] = useState<CaseMediaItem | null>(null);
+  const [isGitHubBackupOpen, setIsGitHubBackupOpen] = useState(false);
 
   // Populate media items with case labels, authentic transcripts, and uploaded assets
   const loadMedia = async () => {
@@ -171,35 +194,90 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
     return () => window.removeEventListener(MEDIA_UPDATED_EVENT, handleUpdate);
   }, [caseData.slug]);
 
-  // Handle direct file upload
+  // Quick drag & drop direct file upload onto vault
+  const handleQuickDropFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setIsUploading(true);
+    setUploadError(null);
+    let lastAdded: CaseMediaItem | null = null;
+    try {
+      for (const file of list) {
+        const cleanTitle =
+          list.length === 1 && uploadTitle.trim()
+            ? uploadTitle.trim()
+            : file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+        const saved = await uploadMediaFile(file, {
+          caseSlug: caseData.slug,
+          caseNumber: caseData.caseNumber,
+          title: cleanTitle,
+          description: uploadDesc.trim() || undefined,
+          transcript: uploadTranscript.trim() || undefined,
+        });
+        lastAdded = convertMediaToCaseMedia(saved);
+      }
+      soundEngine.playBootBeep();
+      await loadMedia();
+      if (lastAdded) setSelectedMedia(lastAdded);
+    } catch (err: any) {
+      setUploadError(err?.message || 'Failed to upload media file.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Handle upload modal submit (supports single/multi files OR direct URL)
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadFile) return;
-
     setIsUploading(true);
     setUploadError(null);
 
     try {
       soundEngine.playKeyClick();
-      const newMedia = await uploadMediaFile(uploadFile, {
-        caseSlug: caseData.slug,
-        caseNumber: caseData.caseNumber,
-        title: uploadTitle.trim() || uploadFile.name,
-        description: uploadDesc.trim(),
-        transcript: uploadTranscript.trim(),
-      });
+      let lastConverted: CaseMediaItem | null = null;
+
+      if (uploadMode === 'url') {
+        if (!linkUrl.trim()) throw new Error('Please enter a video or audio URL.');
+        const savedLink = await addMediaLink({
+          url: linkUrl.trim(),
+          mediaKind: linkKind,
+          caseSlug: caseData.slug,
+          caseNumber: caseData.caseNumber,
+          title: uploadTitle.trim() || undefined,
+          description: uploadDesc.trim() || undefined,
+          transcript: uploadTranscript.trim() || undefined,
+        });
+        lastConverted = convertMediaToCaseMedia(savedLink);
+      } else {
+        if (uploadFiles.length === 0) throw new Error('Please choose at least one file.');
+        for (const f of uploadFiles) {
+          const itemTitle =
+            uploadFiles.length === 1 && uploadTitle.trim()
+              ? uploadTitle.trim()
+              : f.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+          const saved = await uploadMediaFile(f, {
+            caseSlug: caseData.slug,
+            caseNumber: caseData.caseNumber,
+            title: itemTitle,
+            description: uploadDesc.trim() || undefined,
+            transcript: uploadTranscript.trim() || undefined,
+          });
+          lastConverted = convertMediaToCaseMedia(saved);
+        }
+      }
 
       soundEngine.playBootBeep();
       setIsUploadModalOpen(false);
-      setUploadFile(null);
+      setUploadFiles([]);
+      setLinkUrl('');
       setUploadTitle('');
       setUploadDesc('');
       setUploadTranscript('');
 
       await loadMedia();
-      setSelectedMedia(convertMediaToCaseMedia(newMedia));
+      if (lastConverted) setSelectedMedia(lastConverted);
     } catch (err: any) {
-      setUploadError(err.message || 'Failed to upload media file.');
+      setUploadError(err.message || 'Failed to add media.');
     } finally {
       setIsUploading(false);
     }
@@ -235,14 +313,22 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
     }, 900);
   };
 
+  const isExternalCatalogEntry = (m: CaseMediaItem) =>
+    Boolean(m.externalUrl && !m.url && (m.mediaType === 'document' || m.mediaType === 'video'));
+
   const isAudioOrMedia = (m: CaseMediaItem) => {
+    if (isExternalCatalogEntry(m)) return false;
     return isAudioMedia(m) || isVideoMedia(m);
   };
 
   const filteredMedia = mediaList.filter((m) => {
-    if (filterType === 'audio' && !isAudioMedia(m)) return false;
-    if (filterType === 'document' && !isPdfMedia(m)) return false;
-    if (filterType === 'image' && (isAudioMedia(m) || isPdfMedia(m))) return false;
+    if (filterType === 'audio' && !isAudioMedia(m) && !isVideoMedia(m)) return false;
+    if (filterType === 'document' && !isPdfMedia(m) && m.mediaType !== 'document') return false;
+    if (
+      filterType === 'image' &&
+      (isAudioMedia(m) || isVideoMedia(m) || isPdfMedia(m) || m.mediaType === 'document')
+    )
+      return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       return (
@@ -299,8 +385,8 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
             className="bg-black/70 border border-zinc-800 text-xs font-tech text-zinc-300 px-2.5 py-1.5 rounded focus:border-amber-600 focus:outline-none"
           >
             <option value="all">ALL MEDIA ({mediaList.length})</option>
-            <option value="audio">Audio &amp; MP3 / MP4 Reels</option>
-            <option value="document">PDF Court Documents</option>
+            <option value="audio">Audio, MP3 &amp; Video Reels</option>
+            <option value="document">PDF &amp; Archival Documents</option>
             <option value="image">Photographs / Scans</option>
           </select>
 
@@ -308,13 +394,69 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
             type="button"
             onClick={() => {
               soundEngine.playKeyClick();
+              setUploadMode('file');
               setIsUploadModalOpen(true);
             }}
             className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-red-700 text-red-300 hover:bg-red-950/60"
-            title="Upload MP3 audio reel, MP4 surveillance, or PDF court record to this case"
+            title="Upload Videos (MP4/WebM/MOV), Audio (MP3/WAV/M4A), Photos, or paste a Video/Audio URL"
           >
             <Upload className="w-3.5 h-3.5 text-red-400" />
-            <span>+ UPLOAD (MP3 / PDF)</span>
+            <span>+ ADD VIDEO / AUDIO</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setIsGitHubBackupOpen(true);
+            }}
+            className="retro-btn text-xs px-3 py-1.5 flex items-center space-x-1.5 border-emerald-700 text-emerald-300 hover:bg-emerald-950/60"
+            title="Back up photos & media to GitHub using your Personal Access Token"
+          >
+            <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
+            <span>GITHUB BACKUP</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Instant Drag-and-Drop Strip for Videos & Audio */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDropActive(true);
+        }}
+        onDragLeave={() => setIsDropActive(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDropActive(false);
+          if (e.dataTransfer.files?.length) {
+            handleQuickDropFiles(e.dataTransfer.files);
+          }
+        }}
+        className={`p-3 rounded border-2 border-dashed flex flex-wrap items-center justify-between gap-3 text-xs font-mono transition-colors ${
+          isDropActive
+            ? 'border-emerald-400 bg-emerald-950/40 text-emerald-200'
+            : 'border-zinc-800 bg-black/40 text-zinc-400'
+        }`}
+      >
+        <div className="flex items-center space-x-2.5">
+          <Video className="w-4 h-4 text-red-400 shrink-0" />
+          <span>
+            <strong className="text-zinc-200">Quick Drop:</strong> Drag &amp; drop videos (`.mp4`, `.webm`, `.mov`) or audio (`.mp3`, `.wav`, `.m4a`) right here to add them immediately.
+          </span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.playKeyClick();
+              setUploadMode('url');
+              setIsUploadModalOpen(true);
+            }}
+            className="retro-btn px-2.5 py-1 text-[11px] flex items-center space-x-1 text-amber-300 border-amber-700"
+          >
+            <LinkIcon className="w-3 h-3" />
+            <span>PASTE VIDEO/AUDIO URL</span>
           </button>
         </div>
       </div>
@@ -335,7 +477,9 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
             {filteredMedia.map((m) => {
               const isSelected = selectedMedia?.id === m.id;
               const isPdf = isPdfMedia(m);
+              const isDocRecord = m.mediaType === 'document' && !isPdf;
               const isVideo = isVideoMedia(m);
+              const isExternalCatalog = isExternalCatalogEntry(m);
               const hasAudio = isAudioMedia(m) || isVideo;
               const isMp =
                 (m.url && /\.(mp3|mp4|m4a|mpeg|mpg)$/i.test(m.url)) ||
@@ -354,10 +498,10 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                   <div className="flex items-center justify-between text-[10px]">
                     <span
                       className={`uppercase font-pixel flex items-center ${
-                        isPdf ? 'text-red-400' : 'text-amber-400'
+                        isPdf || isDocRecord ? 'text-red-400' : 'text-amber-400'
                       }`}
                     >
-                      {isPdf ? (
+                      {isPdf || isDocRecord ? (
                         <FileText className="w-3 h-3 mr-1 text-red-400" />
                       ) : isVideo ? (
                         <Video className="w-3 h-3 mr-1 text-red-400" />
@@ -368,6 +512,10 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                       )}
                       {isPdf
                         ? 'PDF DOCUMENT'
+                        : isDocRecord
+                        ? 'ARCHIVAL RECORD'
+                        : isExternalCatalog && isVideo
+                        ? 'VIDEO ARCHIVE'
                         : isVideo
                         ? 'MP4 VIDEO'
                         : isMp
@@ -393,6 +541,10 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                     {isPdf ? (
                       <span className="text-[9px] text-red-400 font-pixel flex items-center">
                         <FileText className="w-2.5 h-2.5 mr-0.5" /> PDF VIEWER READY
+                      </span>
+                    ) : isExternalCatalog ? (
+                      <span className="text-[9px] text-amber-400 font-pixel flex items-center">
+                        <ExternalLink className="w-2.5 h-2.5 mr-1" /> SOURCE ARCHIVE LINK
                       </span>
                     ) : hasAudio ? (
                       <span className="text-[9px] text-emerald-400 font-pixel flex items-center">
@@ -434,9 +586,26 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                     {selectedMedia.title}
                   </h4>
                 </div>
-                <div className="text-xs font-tech text-zinc-400 text-right">
-                  <div>DATE: {selectedMedia.recoveredAt || caseData.year}</div>
-                  <div>CASE: {caseData.caseNumber} ({caseData.title})</div>
+                <div className="flex items-center space-x-3 text-xs font-tech text-zinc-400 text-right">
+                  <div>
+                    <div>DATE: {selectedMedia.recoveredAt || caseData.year}</div>
+                    <div>CASE: {caseData.caseNumber} ({caseData.title})</div>
+                  </div>
+                  {selectedMedia.id.startsWith('media-') && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        soundEngine.playKeyClick();
+                        await deleteCustomMedia(selectedMedia.id);
+                        setSelectedMedia(null);
+                        await loadMedia();
+                      }}
+                      className="retro-btn px-2 py-1 text-red-400 border-red-900 hover:bg-red-950/60"
+                      title="Delete this uploaded media item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -466,8 +635,87 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                     </div>
                   </div>
                 </div>
+              ) : isExternalCatalogEntry(selectedMedia) ? (
+                /* EXTERNAL ARCHIVAL CATALOGUE / SOURCE RECORD VIEW */
+                <div className="space-y-4 font-mono text-xs">
+                  <div className="bg-black/85 border border-zinc-800 rounded p-5 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                      <div className="flex items-center space-x-2 text-amber-400 font-pixel text-[11px]">
+                        <Archive className="w-4 h-4 text-amber-400" />
+                        <span>
+                          {selectedMedia.mediaType === 'video'
+                            ? 'CATALOGUED ARCHIVAL VIDEO RECORD'
+                            : 'ARCHIVAL DOCUMENTARY & AGENCY RECORD'}
+                        </span>
+                      </div>
+                      <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-zinc-300 font-mono text-[10px]">
+                        {selectedMedia.recoveredAt || caseData.year}
+                      </span>
+                    </div>
+
+                    <p className="text-zinc-200 font-tech text-sm leading-relaxed">
+                      {selectedMedia.description}
+                    </p>
+
+                    <div className="p-3 bg-zinc-950/90 border border-zinc-800 rounded text-[11px] text-zinc-400 space-y-1">
+                      <div className="text-zinc-300 font-bold uppercase font-pixel text-[10px]">
+                        Source Classification &amp; Provenance
+                      </div>
+                      <div>{selectedMedia.source}</div>
+                      <div className="text-zinc-500 pt-1">
+                        Archival Reference Note: This dossier indexes external source pages directly and does not reproduce copyrighted third-party broadcasts inline.
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
+                      <a
+                        href={selectedMedia.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="retro-btn retro-btn-amber text-xs px-4 py-2 inline-flex items-center space-x-2"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>OPEN EXTERNAL SOURCE ARCHIVE</span>
+                      </a>
+
+                      {selectedMedia.id === 'jb-doc-001' && (
+                        <a
+                          href="https://bouldercolorado.gov/jonbenet-ramsey-homicide"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="retro-btn text-xs px-3.5 py-2 inline-flex items-center space-x-2 border-zinc-700 text-zinc-200 hover:border-amber-600"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                          <span>BOULDER POLICE CASE PAGE</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : isVideoMedia(selectedMedia) && selectedMedia.url ? (
+                /* VIDEO PLAYER VIEW */
+                <div className="space-y-4 font-mono text-xs">
+                  <RetroVideoPlayer
+                    key={selectedMedia.id}
+                    url={selectedMedia.url}
+                    title={selectedMedia.title}
+                    caseNumber={selectedMedia.caseNumber || caseData.caseNumber}
+                  />
+
+                  <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1">
+                    <span className="font-pixel text-[10px] text-amber-400 uppercase block">
+                      Video Exhibit Provenance
+                    </span>
+                    <p className="text-zinc-300 font-tech text-xs leading-relaxed">
+                      {selectedMedia.description}
+                    </p>
+                    <div className="text-[10px] font-pixel text-zinc-500 pt-1 border-t border-zinc-900">
+                      SOURCE: {selectedMedia.source}
+                    </div>
+                  </div>
+                </div>
               ) : isAudioOrMedia(selectedMedia) ? (
-                /* AUDIO & VIDEO PLAYER VIEW */
+                /* AUDIO PLAYER VIEW */
                 <div className="space-y-4 font-mono text-xs">
                   {/* Robust 90s Law Enforcement Retro Audio Player */}
                   <RetroAudioPlayer
@@ -479,6 +727,28 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                     mediaType={selectedMedia.mediaType}
                     defaultDuration={240}
                   />
+
+                  {selectedMedia.externalUrl && (
+                    <div className="p-3.5 bg-amber-950/20 border border-amber-800/60 rounded flex flex-wrap items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="font-pixel text-[10px] text-amber-400 uppercase">
+                          External Primary / Secondary Archive Link
+                        </div>
+                        <div className="text-[11px] font-tech text-zinc-300">
+                          {selectedMedia.source}
+                        </div>
+                      </div>
+                      <a
+                        href={selectedMedia.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="retro-btn retro-btn-amber text-xs px-3.5 py-1.5 inline-flex items-center space-x-1.5 shrink-0"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>OPEN SOURCE RECORD</span>
+                      </a>
+                    </div>
+                  )}
 
                   {/* Audio Provenance & Context */}
                   <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1">
@@ -536,12 +806,29 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
               ) : (
                 /* IMAGE / SCAN VIEW */
                 <div className="space-y-4 font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded">
+                    <span className="text-[11px] text-zinc-400">
+                      Forensic Photo &amp; Exhibit Plate Darkroom
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundEngine.playKeyClick();
+                        setEditingPhotoMedia(selectedMedia);
+                      }}
+                      className="retro-btn retro-btn-amber text-xs px-3 py-1 flex items-center space-x-1.5"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>EDIT PHOTO</span>
+                    </button>
+                  </div>
+
                   <div className="min-h-[260px] max-h-[360px] bg-black/90 border border-zinc-800 rounded flex items-center justify-center p-4 relative overflow-hidden">
                     {selectedMedia.url ? (
                       <img
                         src={selectedMedia.url}
                         alt={selectedMedia.title}
-                        className="max-h-full max-w-full object-contain filter grayscale contrast-125"
+                        className="max-h-full max-w-full object-contain"
                       />
                     ) : (
                       <div className="text-center space-y-2 text-zinc-500">
@@ -550,7 +837,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                           SCANNED FORENSIC DOCUMENT ARCHIVE
                         </div>
                         <p className="text-[11px] font-tech text-zinc-500 max-w-sm">
-                          Public criminal records filing authenticated under federal discovery rules for Case {caseData.caseNumber}.
+                          Click EDIT PHOTO above to customize an archival plate or upload and edit your own photograph.
                         </p>
                       </div>
                     )}
@@ -645,20 +932,47 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
         </div>
       )}
 
-      {/* Upload Media Modal */}
+      {/* Upload Media / Paste URL Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="retro-window max-w-lg w-full p-6 text-zinc-300 space-y-4 shadow-2xl bg-[#080b0f] border-2 border-red-700">
             <div className="retro-window-header active flex items-center justify-between p-2 bg-zinc-900 border-b border-zinc-700">
               <div className="flex items-center space-x-2 text-xs font-pixel text-red-400">
                 <Upload className="w-4 h-4" />
-                <span>UPLOAD CASE MEDIA // {caseData.caseNumber}</span>
+                <span>ADD VIDEO OR AUDIO // {caseData.caseNumber}</span>
               </div>
               <button
                 onClick={() => setIsUploadModalOpen(false)}
                 className="retro-btn text-xs px-2 py-0.5"
               >
                 <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setUploadMode('file')}
+                className={`py-2 px-3 rounded border flex items-center justify-center space-x-1.5 ${
+                  uploadMode === 'file'
+                    ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200 font-bold'
+                    : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                }`}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>UPLOAD FILES</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadMode('url')}
+                className={`py-2 px-3 rounded border flex items-center justify-center space-x-1.5 ${
+                  uploadMode === 'url'
+                    ? 'bg-amber-950/70 border-amber-500 text-amber-200 font-bold'
+                    : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                }`}
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>PASTE VIDEO/AUDIO URL</span>
               </button>
             </div>
 
@@ -670,29 +984,69 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 </div>
               )}
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
-                  Select File (MP3 Audio, MP4 Video, PDF Document, Image):
-                </label>
-                <input
-                  type="file"
-                  required
-                  accept="audio/*,video/*,image/*,.mp3,.mp4,.m4a,.mpeg,.mpg,.wav,.ogg,.aac,.flac,.webm,.mov,.avi,.pdf"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      setUploadFile(f);
-                      if (!uploadTitle) {
-                        setUploadTitle(f.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '));
+              {uploadMode === 'file' ? (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
+                    Choose 1 or more Video / Audio / PDF / Image Files:
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    required
+                    accept="audio/*,video/*,image/*,.mp3,.mp4,.m4a,.m4v,.mpeg,.mpg,.wav,.ogg,.aac,.flac,.webm,.mov,.avi,.pdf"
+                    onChange={(e) => {
+                      const picked = Array.from(e.target.files || []);
+                      setUploadFiles(picked);
+                      if (picked.length === 1 && !uploadTitle) {
+                        setUploadTitle(picked[0].name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '));
                       }
-                    }
-                  }}
-                  className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-200 file:mr-3 file:py-1 file:px-3 file:border-0 file:text-xs file:font-mono file:bg-red-950 file:text-red-300 hover:file:bg-red-900"
-                />
-                <span className="text-[9px] text-zinc-500 block">
-                  MP3 audio automatically mounts in the Audio Vault &amp; Player. PDF files render in Document Viewers.
-                </span>
-              </div>
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-200 file:mr-3 file:py-1 file:px-3 file:border-0 file:text-xs file:font-mono file:bg-red-950 file:text-red-300 hover:file:bg-red-900"
+                  />
+                  {uploadFiles.length > 1 && (
+                    <span className="text-[10px] text-emerald-400 block">
+                      {uploadFiles.length} files selected — original filenames will be used as titles.
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLinkKind('video')}
+                      className={`py-1.5 rounded border flex items-center justify-center space-x-1 ${
+                        linkKind === 'video'
+                          ? 'bg-red-950/60 border-red-500 text-red-200 font-bold'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      <Film className="w-3.5 h-3.5" />
+                      <span>VIDEO</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLinkKind('audio')}
+                      className={`py-1.5 rounded border flex items-center justify-center space-x-1 ${
+                        linkKind === 'audio'
+                          ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200 font-bold'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                      }`}
+                    >
+                      <Music className="w-3.5 h-3.5" />
+                      <span>AUDIO</span>
+                    </button>
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=... or direct .mp4 / .mp3 link"
+                    className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              )}
 
               <div className="space-y-1">
                 <label className="text-[10px] font-pixel text-zinc-400 block uppercase">
@@ -700,8 +1054,8 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. 911 Audio Tape / Indictment Filing.pdf"
+                  required={uploadFiles.length <= 1 && uploadMode === 'file'}
+                  placeholder="e.g. Surveillance Clip / 911 Audio Tape"
                   value={uploadTitle}
                   onChange={(e) => setUploadTitle(e.target.value)}
                   className="w-full bg-black/80 border border-zinc-800 p-2 rounded text-zinc-200 focus:border-red-600 focus:outline-none"
@@ -726,7 +1080,7 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                   Transcript / Text Notes (Optional):
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="[00:00] Speaker: Verbatim transcription..."
                   value={uploadTranscript}
                   onChange={(e) => setUploadTranscript(e.target.value)}
@@ -744,17 +1098,45 @@ export const CaseMediaVaultView: React.FC<CaseMediaVaultViewProps> = ({ caseData
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploading || !uploadFile}
-                  className="retro-btn retro-btn-red text-xs px-4 py-1.5 flex items-center space-x-1.5 disabled:opacity-50"
+                  disabled={
+                    isUploading ||
+                    (uploadMode === 'file' ? uploadFiles.length === 0 : !linkUrl.trim())
+                  }
+                  className="retro-btn retro-btn-green text-xs px-4 py-1.5 flex items-center space-x-1.5 disabled:opacity-50 font-bold"
                 >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{isUploading ? 'UPLOADING...' : 'ARCHIVE MEDIA'}</span>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isUploading ? 'SAVING...' : 'ADD TO CASE'}</span>
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Photo Editor Modal */}
+      {editingPhotoMedia && (
+        <RetroPhotoEditor
+          isOpen={Boolean(editingPhotoMedia)}
+          imageUrl={editingPhotoMedia.url || PRESET_EXHIBIT_PLATES[0].url}
+          initialTitle={editingPhotoMedia.title}
+          initialDescription={editingPhotoMedia.description}
+          caseSlug={caseData.slug}
+          caseNumber={caseData.caseNumber}
+          onClose={() => setEditingPhotoMedia(null)}
+          onSaved={async (saved) => {
+            await loadMedia();
+            setSelectedMedia(convertMediaToCaseMedia(saved));
+          }}
+          onOpenGitHubBackup={() => setIsGitHubBackupOpen(true)}
+        />
+      )}
+
+      {/* GitHub Direct Token Backup Modal */}
+      <GitHubBackupModal
+        isOpen={isGitHubBackupOpen}
+        onClose={() => setIsGitHubBackupOpen(false)}
+        defaultCommitMessage={`302 Docket: Backup ${caseData.caseNumber} media vault photos`}
+      />
     </div>
   );
 };

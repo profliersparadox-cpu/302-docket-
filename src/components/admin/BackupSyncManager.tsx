@@ -16,6 +16,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { collectLocalBoardLayouts } from '../../utils/githubBackup.ts';
 
 export const BackupSyncManager: React.FC = () => {
   // Sync state
@@ -127,6 +128,8 @@ export const BackupSyncManager: React.FC = () => {
           filePath: filePath.trim() || 'data/302_docket_backup.json',
           branch: branch.trim() || 'main',
           commitMessage: commitMessage.trim(),
+          includeMediaFiles: true,
+          boardLayouts: collectLocalBoardLayouts(),
         }),
       });
 
@@ -223,7 +226,7 @@ export const BackupSyncManager: React.FC = () => {
         </div>
 
         <p className="text-zinc-400 text-xs mb-4 leading-relaxed">
-          Provide your target Git repository URL and Personal Access Token (PAT). Clicking <strong>SYNC DIRECT BACKUP</strong> will package the current case dockets, exhibits, settings, and media indexes into a standalone JSON file and commit it directly to your repository via the GitHub Contents API.
+          Provide your target Git repository URL and Personal Access Token (PAT). Clicking <strong>SYNC DIRECT BACKUP</strong> will package the current case dockets, exhibits, board layouts, and all edited/uploaded photo &amp; media files (<code className="text-amber-300">uploads/*</code>) and commit them directly to your repository via the GitHub API.
         </p>
 
         {syncResult && (

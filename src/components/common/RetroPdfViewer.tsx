@@ -14,6 +14,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEngine.ts';
+import { HighlightText } from '../../context/DocumentHighlightContext.tsx';
 
 interface RetroPdfViewerProps {
   url: string;
@@ -204,7 +205,7 @@ export const RetroPdfViewer: React.FC<RetroPdfViewerProps> = ({
                   DOCKET SUMMARY:
                 </span>
                 <p className="text-xs text-zinc-300 font-mono leading-relaxed bg-black/50 p-2.5 border border-zinc-900 rounded">
-                  {description}
+                  <HighlightText text={description} />
                 </p>
               </div>
             )}
@@ -215,7 +216,7 @@ export const RetroPdfViewer: React.FC<RetroPdfViewerProps> = ({
                   ATTACHED TRANSCRIPT EXCERPT:
                 </span>
                 <pre className="text-xs text-zinc-300 font-mono leading-relaxed bg-black/70 p-3 border border-zinc-900 rounded whitespace-pre-wrap overflow-y-auto max-h-72">
-                  {transcript}
+                  <HighlightText text={transcript} />
                 </pre>
               </div>
             )}
